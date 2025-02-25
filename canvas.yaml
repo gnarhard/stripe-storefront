@@ -1,0 +1,10 @@
+
+preset: laravel
+
+namespace: Gnarhard\StripeStorefront
+
+model:
+  namespace: Gnarhard\StripeStorefront
+paths:
+  src: src
+  resource: resources
