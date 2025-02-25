@@ -2,14 +2,14 @@
 
 namespace Gnarhard\StripeStorefront;
 
-use Gnarhard\StripeStorefront\Commands\SyncLiveToTestStripe;
-use Spatie\LaravelPackageTools\Package;
-use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Gnarhard\StripeStorefront\Commands\AddToDatabase;
+use Gnarhard\StripeStorefront\Commands\SyncLiveToTestStripe;
 use Gnarhard\StripeStorefront\Events\OrderCreated;
 use Gnarhard\StripeStorefront\Listeners\SendNewOrderEmail;
 use Gnarhard\StripeStorefront\Listeners\SendOrderConfirmationEmail;
 use Illuminate\Support\Facades\Event;
+use Spatie\LaravelPackageTools\Package;
+use Spatie\LaravelPackageTools\PackageServiceProvider;
 
 class StripeStorefrontServiceProvider extends PackageServiceProvider
 {
@@ -28,7 +28,7 @@ class StripeStorefrontServiceProvider extends PackageServiceProvider
 
         $this->app->bind(
             StripeStorefront::class,
-            fn($app) => new StripeStorefront(app()->environment('production') ? config('stripe-storefront.stripe.live_secret') : config('stripe-storefront.stripe.test_secret')),
+            fn ($app) => new StripeStorefront(app()->environment('production') ? config('stripe-storefront.stripe.live_secret') : config('stripe-storefront.stripe.test_secret')),
         );
 
         Event::listen(OrderCreated::class, SendNewOrderEmail::class);

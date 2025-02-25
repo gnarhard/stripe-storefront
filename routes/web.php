@@ -2,9 +2,8 @@
 
 namespace Gnarhard\StripeStorefront;
 
-use Illuminate\Support\Facades\Route;
 use Gnarhard\StripeStorefront\Http\Controllers\ProductController;
-
+use Illuminate\Support\Facades\Route;
 
 Route::prefix('store')->name('store.')->group(function () {
     Route::get('/products/{category}', [ProductController::class, 'showCategory'])->name('category');

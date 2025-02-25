@@ -2,10 +2,10 @@
 
 namespace Gnarhard\StripeStorefront\Listeners;
 
-use Illuminate\Support\Facades\Mail;
 use Gnarhard\StripeStorefront\Mail\OrderConfirmation;
-use Stripe\Customer;
 use Gnarhard\StripeStorefront\Models\Product;
+use Illuminate\Support\Facades\Mail;
+use Stripe\Customer;
 
 class SendOrderConfirmationEmail
 {

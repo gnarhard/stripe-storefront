@@ -3,45 +3,39 @@
 namespace Gnarhard\StripeStorefront\Http\Controllers;
 
 use Exception;
-use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Gnarhard\StripeStorefront\Events\OrderCreated;
 use Gnarhard\StripeStorefront\Events\OrderFailed;
 use Gnarhard\StripeStorefront\Facades\StripeStorefront;
-use Gnarhard\StripeStorefront\Models\{
-    Order,
-    Product
-};
-use Illuminate\Http\{
-    RedirectResponse,
-    Request
-};
-use Illuminate\Support\Facades\{
-    Cache,
-    Log,
-    Storage
-};
+use Gnarhard\StripeStorefront\Models\Order;
+use Gnarhard\StripeStorefront\Models\Product;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ProductController extends Controller
 {
     public function showCategory(Request $request, string $category): View
     {
-        if (view()->exists("pages.store.category.index")) {
-            $featured_product = Cache::remember('featured_' . $category, 60 * 24, function () use ($category) {
+        if (view()->exists('pages.store.category.index')) {
+            $featured_product = Cache::remember('featured_'.$category, 60 * 24, function () use ($category) {
                 return Product::where('metadata->category', $category)->featured()->first();
             });
 
-            $products = Cache::remember('unfeatured_' . $category, 60 * 24, function () use ($category) {
+            $products = Cache::remember('unfeatured_'.$category, 60 * 24, function () use ($category) {
                 return Product::where('metadata->category', $category)->unfeatured()->get();
             });
 
-            return view("pages.store.category.index", [
-                'products'         => $products,
+            return view('pages.store.category.index', [
+                'products' => $products,
                 'featured_product' => $featured_product,
-                'category'         => $category,
+                'category' => $category,
             ]);
         } else {
-            return view("errors.404");
+            return view('errors.404');
         }
     }
 
@@ -50,18 +44,17 @@ class ProductController extends Controller
         $product = Product::where('slug', $product_slug)->firstOrFail();
 
         if ($product->metadata['category'] !== $category) {
-            return view("errors.404");
+            return view('errors.404');
         }
 
-        return view("pages.store.show", ['product' => $product]);
+        return view('pages.store.show', ['product' => $product]);
     }
-
 
     public function showCheckout(Request $request)
     {
         $request->validate([
             'discount_code_id' => 'string',
-            'product'          => 'string|required|exists:products,slug',
+            'product' => 'string|required|exists:products,slug',
         ]);
 
         $product = Product::where('slug', $request->input('product'))->firstOrFail();
@@ -70,14 +63,14 @@ class ProductController extends Controller
         $sessionData = [
             'payment_method_types' => ['card'],
             'line_items' => [[
-                'price'    => $product->price->stripe_id,
+                'price' => $product->price->stripe_id,
                 'quantity' => 1,
             ]],
             'mode' => 'payment',
-            'success_url' => route('store.thank-you', ['product' => $product->slug]) . '&session_id={CHECKOUT_SESSION_ID}',
-            'cancel_url'  => route('store.product', [
+            'success_url' => route('store.thank-you', ['product' => $product->slug]).'&session_id={CHECKOUT_SESSION_ID}',
+            'cancel_url' => route('store.product', [
                 'category' => $product->metadata['category'],
-                'product'  => $product->slug
+                'product' => $product->slug,
             ]),
             'customer_creation' => 'always',
         ];
@@ -85,7 +78,7 @@ class ProductController extends Controller
         // Optionally, if a discount code is provided, add it to the session.
         if ($request->filled('discount_code_id')) {
             $sessionData['discounts'] = [
-                ['coupon' => $request->input('discount_code_id')]
+                ['coupon' => $request->input('discount_code_id')],
             ];
         } else {
             $sessionData['allow_promotion_codes'] = true;
@@ -104,7 +97,7 @@ class ProductController extends Controller
         $product = Product::where('slug', $request->get('product'))->firstOrFail();
         $sessionId = $request->get('session_id');
 
-        if (!$sessionId) {
+        if (! $sessionId) {
             return $this->showCheckoutError($product, new \Exception('No session ID provided.'));
         }
 
@@ -112,9 +105,9 @@ class ProductController extends Controller
 
         if (app()->environment('testing')) {
             // Provide dummy customer details for testing
-            $customer = (object)[
-                'email'   => 'test@example.com',
-                'zip'     => '12345',
+            $customer = (object) [
+                'email' => 'test@example.com',
+                'zip' => '12345',
                 'country' => 'US',
             ];
         } else {
@@ -122,7 +115,7 @@ class ProductController extends Controller
                 // Retrieve the Checkout Session using the provided session ID
                 $session = StripeStorefront::getClient()->checkout->sessions->retrieve($sessionId);
 
-                if (!empty($session->customer)) {
+                if (! empty($session->customer)) {
                     // Retrieve the customer information using the customer ID from the session
                     $customer = StripeStorefront::getClient()->customers->retrieve($session->customer);
                 }
@@ -132,19 +125,19 @@ class ProductController extends Controller
         }
 
         // Create an order if one doesn't exist for this session
-        if (!Order::where('stripe_session_id', $sessionId)->exists()) {
+        if (! Order::where('stripe_session_id', $sessionId)->exists()) {
             Order::create([
                 'stripe_session_id' => $sessionId,
-                'email'             => $customer->email,
+                'email' => $customer->email,
             ]);
 
             event(new OrderCreated($product, $customer));
         }
 
         return view('pages.store.thank-you', [
-            'product'  => $product,
+            'product' => $product,
             'customer' => $customer,
-            'order'    => Order::where('stripe_session_id', $sessionId)->first(),
+            'order' => Order::where('stripe_session_id', $sessionId)->first(),
         ]);
     }
 
@@ -161,11 +154,11 @@ class ProductController extends Controller
     {
         $product = Product::where('slug', request('product'))->firstOrFail();
 
-        if (!isset($product->metadata['filename'])) {
+        if (! isset($product->metadata['filename'])) {
             abort(404);
         }
 
-        if (!Storage::disk(config('stripe-storefront.downloads-storage-disk'))->exists($product->metadata['filename'])) {
+        if (! Storage::disk(config('stripe-storefront.downloads-storage-disk'))->exists($product->metadata['filename'])) {
             abort(404);
         }
 
@@ -180,6 +173,7 @@ class ProductController extends Controller
             return $coupon && $coupon->valid;
         } catch (\Exception $e) {
             Log::error($e->getMessage());
+
             return false;
         }
     }

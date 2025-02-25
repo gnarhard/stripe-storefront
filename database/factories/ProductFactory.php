@@ -19,20 +19,20 @@ class ProductFactory extends Factory
         $types = ['lessons', 'merch'];
 
         return [
-            'name'        => $this->faker->name,
-            'slug'        => $this->faker->slug,
+            'name' => $this->faker->name,
+            'slug' => $this->faker->slug,
             'description' => $this->faker->sentence,
-            'price_id'    => 'price_' . $this->faker->word(),
-            'stripe_id'   => 'prod_' . $this->faker->word(),
-            'features'    => [
+            'price_id' => 'price_'.$this->faker->word(),
+            'stripe_id' => 'prod_'.$this->faker->word(),
+            'features' => [
                 $this->faker->sentence,
                 $this->faker->sentence,
                 $this->faker->sentence,
             ],
-            'metadata'    => [
-                "category"          => $this->faker->randomElement($types),
-                "featured"          => $this->faker->boolean,
-                "short_description" => $this->faker->sentence,
+            'metadata' => [
+                'category' => $this->faker->randomElement($types),
+                'featured' => $this->faker->boolean,
+                'short_description' => $this->faker->sentence,
             ],
         ];
     }

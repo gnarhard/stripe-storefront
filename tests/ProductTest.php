@@ -2,15 +2,15 @@
 
 namespace Feature;
 
+use Gnarhard\MailingList\Jobs\SignUpForMailingList;
 use Gnarhard\StripeStorefront\Mail\NewOrder;
+use Gnarhard\StripeStorefront\Mail\OrderConfirmation;
 use Gnarhard\StripeStorefront\Models\Product;
+use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
-use Livewire\Livewire;
-use Gnarhard\StripeStorefront\Mail\OrderConfirmation;
-use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Queue;
-use Gnarhard\MailingList\Jobs\SignUpForMailingList;
+use Livewire\Livewire;
 
 uses(WithFaker::class);
 
@@ -24,7 +24,7 @@ it('can load the single product page', function ($slug, $category) {
     $this->get(route('store.product', ['category' => $category, $product]))
         ->assertOk()
         ->assertSee($product->name)
-        ->assertSee("BUY");
+        ->assertSee('BUY');
 })->with([
     ['tablature-collection', 'merch'],
     ['plantable-collection', 'merch'],
@@ -40,13 +40,13 @@ test('downloadable products have filename metadata', function ($slug) {
 })->with([
     'tablature-collection',
     'plantable-collection',
-    'karma-poster'
+    'karma-poster',
 ]);
 
 it('can load the product category page', function ($category) {
     $this->get(route('store.category', ['category' => $category]))
         ->assertOk()
-        ->assertSee("FEATURED");
+        ->assertSee('FEATURED');
 })->with(['lessons', 'merch']);
 
 it('can get a plantable collection', function () {
@@ -75,13 +75,13 @@ test('checking out a product redirects to Stripe Checkout page', function ($slug
     'karma-poster',
     'plantable-collection',
     'single-lesson',
-    'lesson-4-pack'
+    'lesson-4-pack',
 ]);
 
 it('cannot see product success page if session_id is not present', function () {
     $product = Product::factory()->create();
 
-    $response = $this->get(route('store.success', ['product' => $product]) . '&session_id=');
+    $response = $this->get(route('store.success', ['product' => $product]).'&session_id=');
     $response->assertRedirect();
 });
 
@@ -92,7 +92,7 @@ it('can see product success page', function ($slug) {
     $product = Product::where('slug', $slug)->first();
     $session_id = $this->faker->uuid();
 
-    $response = $this->get(route('store.success', ['product' => $product]) . '&session_id=' . $session_id);
+    $response = $this->get(route('store.success', ['product' => $product]).'&session_id='.$session_id);
     $response
         ->assertOk()
         ->assertSee($product->name)
@@ -113,7 +113,7 @@ it('can see product success page', function ($slug) {
         'orders',
         [
             'stripe_session_id' => $session_id,
-            'email'             => 'test@example.com'
+            'email' => 'test@example.com',
         ]
     );
 
@@ -123,7 +123,7 @@ it('can see product success page', function ($slug) {
     'karma-poster',
     'plantable-collection',
     'single-lesson',
-    'lesson-4-pack'
+    'lesson-4-pack',
 ]);
 
 it('can see product success page without zip code', function () {
@@ -133,7 +133,7 @@ it('can see product success page without zip code', function () {
     $product = Product::where('slug', 'tablature-collection')->first();
     $session_id = $this->faker->uuid();
 
-    $response = $this->get(route('store.success', ['product' => $product]) . '&session_id=' . $session_id);
+    $response = $this->get(route('store.success', ['product' => $product]).'&session_id='.$session_id);
     $response
         ->assertOk()
         ->assertSee($product->name)
@@ -148,7 +148,7 @@ it('can see product success page without zip code', function () {
         'orders',
         [
             'stripe_session_id' => $session_id,
-            'email'             => 'test@example.com'
+            'email' => 'test@example.com',
         ]
     );
 
@@ -162,7 +162,7 @@ it('can download product downloads', function ($slug) {
 })->with([
     'tablature-collection',
     'karma-poster',
-    'plantable-collection'
+    'plantable-collection',
 ]);
 
 it('aborts when trying to download products without digital downloads', function ($slug) {
@@ -171,5 +171,5 @@ it('aborts when trying to download products without digital downloads', function
     $this->get(route('store.download', ['product' => $product]))->assertStatus(404);
 })->with([
     'single-lesson',
-    'lesson-4-pack'
+    'lesson-4-pack',
 ]);

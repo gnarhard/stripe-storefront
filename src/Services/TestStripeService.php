@@ -4,8 +4,8 @@ namespace Gnarhard\StripeStorefront\Services;
 
 use Stripe\Coupon;
 use Stripe\Price;
-use Stripe\StripeClient;
 use Stripe\Product;
+use Stripe\StripeClient;
 
 class TestStripeService
 {
@@ -18,8 +18,6 @@ class TestStripeService
 
     /**
      * Archive all test products.
-     *
-     * @return void
      */
     public function archiveAllProducts(): void
     {
@@ -32,8 +30,6 @@ class TestStripeService
 
     /**
      * Delete all test coupons.
-     *
-     * @return void
      */
     public function deleteAllCoupons(): void
     {
@@ -45,22 +41,17 @@ class TestStripeService
 
     /**
      * Create a product in the test environment.
-     *
-     * @param array $data
-     * @return \Stripe\Product
      */
     public function createProduct(array $data): Product
     {
         unset($data['active']);
         $data = $this->prepare($data);
+
         return $this->client->products->create($data);
     }
 
     /**
      * Create a price in the test environment.
-     *
-     * @param array $data
-     * @return \Stripe\Price
      */
     public function createPrice(array $data): Price
     {
@@ -68,26 +59,22 @@ class TestStripeService
         $price = $this->client->prices->create($data);
         // set as default price for product
         $this->client->products->update($data['product'], ['default_price' => $price->id]);
+
         return $price;
     }
 
     /**
      * Create a coupon in the test environment.
-     *
-     * @param array $data
-     * @return \Stripe\Coupon
      */
     public function createCoupon(array $data): Coupon
     {
         $data = $this->prepare($data);
+
         return $this->client->coupons->create($data);
     }
 
     /**
      * Prepare data for Stripe API.
-     *
-     * @param array $data
-     * @return array
      */
     public function prepare(array $data): array
     {
@@ -98,6 +85,6 @@ class TestStripeService
         }
 
         // unset any fields that have null values or empty strings
-        return array_filter($data, fn($value) => $value !== null && $value !== '');
+        return array_filter($data, fn ($value) => $value !== null && $value !== '');
     }
 }

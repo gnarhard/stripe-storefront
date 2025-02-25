@@ -2,10 +2,10 @@
 
 namespace Gnarhard\StripeStorefront\Listeners;
 
+use Gnarhard\StripeStorefront\Mail\NewOrder;
+use Gnarhard\StripeStorefront\Models\Product;
 use Illuminate\Support\Facades\Mail;
 use Stripe\Customer;
-use Gnarhard\StripeStorefront\Models\Product;
-use Gnarhard\StripeStorefront\Mail\NewOrder;
 
 class SendNewOrderEmail
 {

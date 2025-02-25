@@ -2,9 +2,9 @@
 
 namespace Gnarhard\StripeStorefront\Tests;
 
+use Gnarhard\StripeStorefront\StripeStorefrontServiceProvider;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Orchestra\Testbench\TestCase as Orchestra;
-use Gnarhard\StripeStorefront\StripeStorefrontServiceProvider;
 
 class TestCase extends Orchestra
 {

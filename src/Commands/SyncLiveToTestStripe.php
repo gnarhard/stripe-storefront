@@ -2,14 +2,15 @@
 
 namespace Gnarhard\StripeStorefront\Commands;
 
-use Illuminate\Console\Command;
 use Gnarhard\StripeStorefront\Services\LiveStripeService;
-use Gnarhard\StripeStorefront\Services\TestStripeService;
 use Gnarhard\StripeStorefront\Services\StripeSyncService;
+use Gnarhard\StripeStorefront\Services\TestStripeService;
+use Illuminate\Console\Command;
 
 class SyncLiveToTestStripe extends Command
 {
     protected $signature = 'products:sync-live-to-test {--dry-run}';
+
     protected $description = 'Sync all live Stripe products, prices, and coupons to the test environment.';
 
     public function handle()
@@ -20,8 +21,9 @@ class SyncLiveToTestStripe extends Command
         $liveApiKey = config('stripe-storefront.stripe.live_secret');
         $testApiKey = config('stripe-storefront.stripe.test_secret');
 
-        if (!$liveApiKey || !$testApiKey) {
+        if (! $liveApiKey || ! $testApiKey) {
             $this->error('Stripe API keys are missing. Please set STRIPE_LIVE_SECRET and STRIPE_TEST_SECRET.');
+
             return;
         }
 
