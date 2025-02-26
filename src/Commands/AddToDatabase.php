@@ -63,15 +63,12 @@ class AddToDatabase extends Command
 
     private function save_product($stripeProduct): Product
     {
-        $features = collect($stripeProduct->features)->map(fn ($feature) => $feature->name)->toArray();
-
         return Product::create([
             'stripe_id' => $stripeProduct->id,
             'slug' => Str::slug($stripeProduct->name ?? 'Untitled product'),
             'name' => $stripeProduct->name ?? 'Untitled product',
             'description' => $stripeProduct->description ?? '',
             'metadata' => $stripeProduct->metadata ?? [],
-            'features' => $features ?? [],
         ]);
     }
 

@@ -55,7 +55,6 @@ class StripeSyncService
                     'shippable' => $liveProduct->shippable ?? null,
                     'url' => $liveProduct->url ?? null,
                     'tax_code' => $liveProduct->tax_code ?? null,
-                    // 'marketing_features' => $liveProduct->marketing_features ?? [], // creates invalid object :(
                 ]);
                 $log('Cloned product: '.$testProduct->name);
 

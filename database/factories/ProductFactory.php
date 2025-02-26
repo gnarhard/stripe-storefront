@@ -24,11 +24,6 @@ class ProductFactory extends Factory
             'description' => $this->faker->sentence,
             'price_id' => 'price_'.$this->faker->word(),
             'stripe_id' => 'prod_'.$this->faker->word(),
-            'features' => [
-                $this->faker->sentence,
-                $this->faker->sentence,
-                $this->faker->sentence,
-            ],
             'metadata' => [
                 'category' => $this->faker->randomElement($types),
                 'featured' => $this->faker->boolean,

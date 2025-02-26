@@ -16,7 +16,6 @@ class Product extends Model implements HasMedia
     protected $guarded = [];
 
     protected $casts = [
-        'features' => 'array',
         'metadata' => 'array',
     ];
 
