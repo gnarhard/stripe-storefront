@@ -2,6 +2,7 @@
 
 namespace Gnarhard\StripeStorefront\Mail;
 
+use Gnarhard\StripeStorefront\Models\Customer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -10,7 +11,6 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Mail\Mailables\Address;
 use Gnarhard\StripeStorefront\Models\Product;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Stripe\Customer;
 
 class NewOrder extends Mailable implements ShouldQueue
 {

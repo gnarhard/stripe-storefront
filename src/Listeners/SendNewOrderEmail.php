@@ -2,17 +2,18 @@
 
 namespace Gnarhard\StripeStorefront\Listeners;
 
+use Gnarhard\StripeStorefront\Events\OrderCreated;
 use Illuminate\Support\Facades\Mail;
-use Stripe\Customer;
 use Gnarhard\StripeStorefront\Models\Product;
 use Gnarhard\StripeStorefront\Mail\NewOrder;
+use Gnarhard\StripeStorefront\Models\Customer;
 
 class SendNewOrderEmail
 {
     /**
      * Create the event listener.
      */
-    public function __construct(public Product $product, public Customer $customer)
+    public function __construct()
     {
         //
     }
@@ -20,8 +21,8 @@ class SendNewOrderEmail
     /**
      * Handle the event.
      */
-    public function handle(object $event): void
+    public function handle(OrderCreated $event): void
     {
-        Mail::to(config('mail.from.address'))->send(new NewOrder($this->product, $this->customer));
+        Mail::to(config('mail.from.address'))->send(new NewOrder($event->product, $event->customer));
     }
 }

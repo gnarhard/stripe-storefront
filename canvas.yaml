@@ -4,7 +4,7 @@ preset: laravel
 namespace: Gnarhard\StripeStorefront
 
 model:
-  namespace: Gnarhard\StripeStorefront
+  namespace: Gnarhard\StripeStorefront\Models
 paths:
   src: src
   resource: resources

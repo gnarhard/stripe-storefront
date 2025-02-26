@@ -2,9 +2,10 @@
 
 namespace Gnarhard\StripeStorefront\Listeners;
 
+use Gnarhard\StripeStorefront\Events\OrderCreated;
 use Illuminate\Support\Facades\Mail;
 use Gnarhard\StripeStorefront\Mail\OrderConfirmation;
-use Stripe\Customer;
+use Gnarhard\StripeStorefront\Models\Customer;
 use Gnarhard\StripeStorefront\Models\Product;
 
 class SendOrderConfirmationEmail
@@ -12,7 +13,7 @@ class SendOrderConfirmationEmail
     /**
      * Create the event listener.
      */
-    public function __construct(public Product $product, public Customer $customer)
+    public function __construct()
     {
         //
     }
@@ -20,8 +21,8 @@ class SendOrderConfirmationEmail
     /**
      * Handle the event.
      */
-    public function handle(object $event): void
+    public function handle(OrderCreated $event): void
     {
-        Mail::to($this->customer->email)->send(new OrderConfirmation($this->product));
+        Mail::to($event->customer->email)->send(new OrderConfirmation($event->product));
     }
 }

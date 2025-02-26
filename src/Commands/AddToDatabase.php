@@ -2,6 +2,7 @@
 
 namespace Gnarhard\StripeStorefront\Commands;
 
+use Gnarhard\StripeStorefront\Facades\StripeStorefront;
 use Illuminate\Console\Command;
 use Gnarhard\StripeStorefront\Models\Product;
 use Laravel\Cashier\Cashier;
@@ -33,10 +34,7 @@ class AddToDatabase extends Command
      */
     public function handle(): void
     {
-        $this->stripe = Cashier::stripe([
-            'api_key' => config(app()->environment('production') ? 'stripe-storefront.stripe.live_secret' : 'stripe-storefront.stripe.test_secret'),
-        ]);
-
+        $this->stripe = StripeStorefront::getClient();
         $stripe_products = $this->stripe->products->all(['active' => true])->data;
         $stripe_prices = $this->stripe->prices->all(['active' => true])->data;
 
@@ -53,7 +51,7 @@ class AddToDatabase extends Command
 
             $product = $this->save_product($stripeProduct);
 
-            $this->save_price($product, $stripe_prices);
+            $this->save_price($product, $stripe_prices, $stripeProduct->default_price);
             $this->save_media($product, $stripeProduct->images ?? []);
 
             $this->info('Synced ' . $product->name . '.');
@@ -73,14 +71,13 @@ class AddToDatabase extends Command
             'name'        => $stripeProduct->name ?? 'Untitled product',
             'description' => $stripeProduct->description ?? '',
             'metadata'    => $stripeProduct->metadata ?? [],
-            'price_id'    => $stripeProduct->default_price ?? null,
             'features'    => $features ?? [],
         ]);
     }
 
-    private function save_price(Product $product, $stripe_prices): void
+    private function save_price(Product $product, $stripe_prices, string $default_price): void
     {
-        $stripe_price = collect($stripe_prices)->firstWhere('id', $product->price_id);
+        $stripe_price = collect($stripe_prices)->firstWhere('id', $default_price);
 
         $payment_link = $this->stripe->paymentLinks->create([
             'line_items' => [
@@ -94,7 +91,7 @@ class AddToDatabase extends Command
         Price::updateOrCreate([
             'stripe_id'       => $stripe_price->id,
             'product_id'      => $product->id,
-            'unit_amount'     => $stripe_price->unit_amount ?? 0, // todo: make this nullable for name your own price products
+            'unit_amount'     => $stripe_price->unit_amount, // nullable for name your own price products
             'type'            => $stripe_price->type,
             'payment_link'    => $payment_link->url,
             'payment_link_id' => $payment_link->id,

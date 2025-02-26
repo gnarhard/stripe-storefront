@@ -10,7 +10,8 @@ use Gnarhard\StripeStorefront\Events\OrderFailed;
 use Gnarhard\StripeStorefront\Facades\StripeStorefront;
 use Gnarhard\StripeStorefront\Models\{
     Order,
-    Product
+    Product,
+    Customer
 };
 use Illuminate\Http\{
     RedirectResponse,
@@ -45,11 +46,9 @@ class ProductController extends Controller
         }
     }
 
-    public function showProduct(Request $request, string $category, string $product_slug): View
+    public function showProduct(Request $request, string $category, Product $product): View
     {
-        $product = Product::where('slug', $product_slug)->firstOrFail();
-
-        if ($product->metadata['category'] !== $category) {
+        if (!$product->metadata || $product->metadata['category'] !== $category) {
             return view("errors.404");
         }
 
@@ -75,11 +74,10 @@ class ProductController extends Controller
             ]],
             'mode' => 'payment',
             'success_url' => route('store.thank-you', ['product' => $product->slug]) . '&session_id={CHECKOUT_SESSION_ID}',
-            'cancel_url'  => route('store.product', [
+            'cancel_url'  => route('store.product.show', [
                 'category' => $product->metadata['category'],
                 'product'  => $product->slug
             ]),
-            'customer_creation' => 'always',
         ];
 
         // Optionally, if a discount code is provided, add it to the session.
@@ -100,6 +98,10 @@ class ProductController extends Controller
 
     public function thankYou(Request $request): View|RedirectResponse
     {
+        $request->validate([
+            'product'    => 'string|required|exists:products,slug',
+        ]);
+
         // Retrieve the product by ID (or adjust as needed)
         $product = Product::where('slug', $request->get('product'))->firstOrFail();
         $sessionId = $request->get('session_id');
@@ -111,50 +113,62 @@ class ProductController extends Controller
         $customer = null;
 
         if (app()->environment('testing')) {
-            // Provide dummy customer details for testing
-            $customer = (object)[
+            $customer = Customer::updateOrCreate([
+                'email' => 'test@example.com'
+            ], [
+                'name'    => 'Test Testerson',
                 'email'   => 'test@example.com',
-                'zip'     => '12345',
-                'country' => 'US',
-            ];
+                'address' => [
+                    'postal_code' => '12345',
+                    'country'     => 'US',
+                ]
+            ]);
         } else {
             try {
                 // Retrieve the Checkout Session using the provided session ID
                 $session = StripeStorefront::getClient()->checkout->sessions->retrieve($sessionId);
 
-                if (!empty($session->customer)) {
+                if (!empty($session->customer_details)) {
                     // Retrieve the customer information using the customer ID from the session
-                    $customer = StripeStorefront::getClient()->customers->retrieve($session->customer);
+                    $customer = Customer::updateOrCreate([
+                        'email' => $session->customer_details->email,
+                    ], [
+                        'name'    => $session->customer_details->name,
+                        'email'   => $session->customer_details->email,
+                        'phone'   => $session->customer_details->phone,
+                        'address' => $session->customer_details->address->toArray(),
+                    ]);
                 }
             } catch (\Exception $e) {
                 return $this->showCheckoutError($product, $e);
             }
         }
 
-        // Create an order if one doesn't exist for this session
-        if (!Order::where('stripe_session_id', $sessionId)->exists()) {
-            Order::create([
+        $order = Order::updateOrCreate(
+            [
+                'stripe_session_id' => $sessionId
+            ],
+            [
                 'stripe_session_id' => $sessionId,
                 'email'             => $customer->email,
-            ]);
+                'total'             => app()->environment('testing') ? 69 : $session->amount_total,
+            ]
+        );
 
-            event(new OrderCreated($product, $customer));
-        }
+        OrderCreated::dispatch($product, $customer, $order);
 
         return view('pages.store.thank-you', [
             'product'  => $product,
             'customer' => $customer,
-            'order'    => Order::where('stripe_session_id', $sessionId)->first(),
+            'order'    => $order,
         ]);
     }
 
-    private function showCheckoutError(Product $product, ?Exception $e): RedirectResponse
+    private function showCheckoutError(Product $product, ?Exception $e): View
     {
         event(new OrderFailed($e));
 
-        session()->flash('error', 'There was an error processing your payment. Please try again.');
-
-        return redirect()->route('store.product', ['category' => $product->metadata['category'], $product->slug]);
+        return view('pages.store.order-failed');
     }
 
     public function download(): BinaryFileResponse

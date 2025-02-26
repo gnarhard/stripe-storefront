@@ -42,4 +42,9 @@ class Product extends Model implements HasMedia
     {
         return $query->where('metadata->featured', null)->orWhere('metadata->featured', '!=', 1);
     }
+
+    public function scopeCategory(Builder $query, string $category): Builder
+    {
+        return $query->where('metadata->category', $category);
+    }
 }

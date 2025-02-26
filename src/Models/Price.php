@@ -9,6 +9,8 @@ class Price extends Model
 {
     use HasFactory;
 
+    protected $table = 'prices';
+
     protected $guarded = [];
 
     public function getAmountAttribute(): float

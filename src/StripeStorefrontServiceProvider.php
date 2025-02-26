@@ -23,6 +23,8 @@ class StripeStorefrontServiceProvider extends PackageServiceProvider
         $package
             ->name('stripe-storefront')
             ->hasConfigFile()
+            ->hasViews()
+            ->hasMigrations(['create_products_table', 'create_media_table', 'create_prices_table', 'create_orders_table', 'create_customers_table'])
             ->hasRoutes('web')
             ->hasCommands(AddToDatabase::class, SyncLiveToTestStripe::class);
 
