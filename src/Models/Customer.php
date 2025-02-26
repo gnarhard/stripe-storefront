@@ -14,7 +14,7 @@ class Customer extends Model
 
     public function getAddressFormattedAttribute(): string
     {
-        return $this->address['line1'] . ', ' . $this->address['line2'] . ', ' . $this->address['city'] . ', ' . $this->address['state'] . ' ' . $this->address['postal_code'] . ', ' . $this->address['country'];
+        return $this->address['line1'].', '.$this->address['line2'].', '.$this->address['city'].', '.$this->address['state'].' '.$this->address['postal_code'].', '.$this->address['country'];
     }
 
     public function getFirstNameAttribute(): string

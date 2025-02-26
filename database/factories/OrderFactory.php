@@ -27,7 +27,7 @@ class OrderFactory extends Factory
     public function definition(): array
     {
         return [
-            'stripe_session_id' => 'cs_test_' . $this->faker->uuid,
+            'stripe_session_id' => 'cs_test_'.$this->faker->uuid,
             'email' => $this->faker->email,
             'total' => $this->faker->numberBetween(1000, 10000),
         ];

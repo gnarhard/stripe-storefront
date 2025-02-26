@@ -2,8 +2,8 @@
 
 namespace Gnarhard\StripeStorefront\Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use Gnarhard\StripeStorefront\Models\Price;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @template TModel of \Gnarhard\StripeStorefront\Price
@@ -27,12 +27,12 @@ class PriceFactory extends Factory
     public function definition(): array
     {
         return [
-            'price_id'        => 'price_' . $this->faker->uuid,
-            'unit_amount'     => $this->faker->numberBetween(1000, 10000),
-            'type'            => 'one_time',
-            'payment_link_id' => 'plink_' . $this->faker->uuid,
-            'payment_link'    => 'https://example.com/payment/' . $this->faker->uuid,
-            'currency'        => 'usd',
+            'price_id' => 'price_'.$this->faker->uuid,
+            'unit_amount' => $this->faker->numberBetween(1000, 10000),
+            'type' => 'one_time',
+            'payment_link_id' => 'plink_'.$this->faker->uuid,
+            'payment_link' => 'https://example.com/payment/'.$this->faker->uuid,
+            'currency' => 'usd',
         ];
     }
 }

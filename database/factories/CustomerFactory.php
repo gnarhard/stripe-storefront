@@ -1,6 +1,5 @@
 <?php
 
-
 namespace Gnarhard\StripeStorefront\Database\Factories;
 
 use Gnarhard\StripeStorefront\Models\Customer;
@@ -28,16 +27,16 @@ class CustomerFactory extends Factory
     public function definition(): array
     {
         return [
-            'name'    => $this->faker->name,
-            'email'   => $this->faker->email,
-            'phone'   => $this->faker->phoneNumber,
+            'name' => $this->faker->name,
+            'email' => $this->faker->email,
+            'phone' => $this->faker->phoneNumber,
             'address' => [
-                'line1'       => $this->faker->streetAddress,
-                'line2'       => $this->faker->secondaryAddress,
-                'city'        => $this->faker->city,
-                'state'       => $this->faker->state,
+                'line1' => $this->faker->streetAddress,
+                'line2' => $this->faker->secondaryAddress,
+                'city' => $this->faker->city,
+                'state' => $this->faker->state,
                 'postal_code' => $this->faker->postcode,
-                'country'     => $this->faker->countryCode,
+                'country' => $this->faker->countryCode,
             ],
         ];
     }

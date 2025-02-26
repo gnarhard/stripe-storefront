@@ -3,13 +3,12 @@
 namespace Gnarhard\StripeStorefront\Commands;
 
 use Gnarhard\StripeStorefront\Facades\StripeStorefront;
-use Illuminate\Console\Command;
-use Gnarhard\StripeStorefront\Models\Product;
-use Laravel\Cashier\Cashier;
 use Gnarhard\StripeStorefront\Models\Price;
+use Gnarhard\StripeStorefront\Models\Product;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Cache;
 
 class AddToDatabase extends Command
 {
@@ -45,7 +44,8 @@ class AddToDatabase extends Command
 
         foreach ($stripe_products as $stripeProduct) {
             if ($stripeProduct->active === false) {
-                $this->warn('Skipped ' . $stripeProduct->name . '.');
+                $this->warn('Skipped '.$stripeProduct->name.'.');
+
                 continue;
             }
 
@@ -54,7 +54,7 @@ class AddToDatabase extends Command
             $this->save_price($product, $stripe_prices, $stripeProduct->default_price);
             $this->save_media($product, $stripeProduct->images ?? []);
 
-            $this->info('Synced ' . $product->name . '.');
+            $this->info('Synced '.$product->name.'.');
         }
 
         // Bust all cache
@@ -63,15 +63,15 @@ class AddToDatabase extends Command
 
     private function save_product($stripeProduct): Product
     {
-        $features = collect($stripeProduct->features)->map(fn($feature) => $feature->name)->toArray();
+        $features = collect($stripeProduct->features)->map(fn ($feature) => $feature->name)->toArray();
 
         return Product::create([
-            'stripe_id'   => $stripeProduct->id,
-            'slug'        => Str::slug($stripeProduct->name ?? 'Untitled product'),
-            'name'        => $stripeProduct->name ?? 'Untitled product',
+            'stripe_id' => $stripeProduct->id,
+            'slug' => Str::slug($stripeProduct->name ?? 'Untitled product'),
+            'name' => $stripeProduct->name ?? 'Untitled product',
             'description' => $stripeProduct->description ?? '',
-            'metadata'    => $stripeProduct->metadata ?? [],
-            'features'    => $features ?? [],
+            'metadata' => $stripeProduct->metadata ?? [],
+            'features' => $features ?? [],
         ]);
     }
 
@@ -82,18 +82,18 @@ class AddToDatabase extends Command
         $payment_link = $this->stripe->paymentLinks->create([
             'line_items' => [
                 [
-                    'price'    => $stripe_price->id,
+                    'price' => $stripe_price->id,
                     'quantity' => 1,
                 ],
             ],
         ]);
 
         Price::updateOrCreate([
-            'stripe_id'       => $stripe_price->id,
-            'product_id'      => $product->id,
-            'unit_amount'     => $stripe_price->unit_amount, // nullable for name your own price products
-            'type'            => $stripe_price->type,
-            'payment_link'    => $payment_link->url,
+            'stripe_id' => $stripe_price->id,
+            'product_id' => $product->id,
+            'unit_amount' => $stripe_price->unit_amount, // nullable for name your own price products
+            'type' => $stripe_price->type,
+            'payment_link' => $payment_link->url,
             'payment_link_id' => $payment_link->id,
         ]);
     }

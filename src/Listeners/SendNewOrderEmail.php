@@ -3,10 +3,8 @@
 namespace Gnarhard\StripeStorefront\Listeners;
 
 use Gnarhard\StripeStorefront\Events\OrderCreated;
-use Illuminate\Support\Facades\Mail;
-use Gnarhard\StripeStorefront\Models\Product;
 use Gnarhard\StripeStorefront\Mail\NewOrder;
-use Gnarhard\StripeStorefront\Models\Customer;
+use Illuminate\Support\Facades\Mail;
 
 class SendNewOrderEmail
 {

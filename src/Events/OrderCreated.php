@@ -4,11 +4,11 @@ namespace Gnarhard\StripeStorefront\Events;
 
 use Gnarhard\StripeStorefront\Models\Customer;
 use Gnarhard\StripeStorefront\Models\Order;
+use Gnarhard\StripeStorefront\Models\Product;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use Gnarhard\StripeStorefront\Models\Product;
 
 class OrderCreated
 {

@@ -2,8 +2,8 @@
 
 namespace Gnarhard\StripeStorefront;
 
-use Illuminate\Support\Facades\Route;
 use Gnarhard\StripeStorefront\Http\Controllers\ProductController;
+use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->group(function () {
     Route::prefix('store')->name('store.')->group(function () {

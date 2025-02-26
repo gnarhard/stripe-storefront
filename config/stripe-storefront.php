@@ -6,5 +6,5 @@ return [
     'stripe' => [
         'live_secret' => env('STRIPE_LIVE_SECRET'),
         'test_secret' => env('STRIPE_TEST_SECRET'),
-    ]
+    ],
 ];

@@ -3,10 +3,8 @@
 namespace Gnarhard\StripeStorefront\Listeners;
 
 use Gnarhard\StripeStorefront\Events\OrderCreated;
-use Illuminate\Support\Facades\Mail;
 use Gnarhard\StripeStorefront\Mail\OrderConfirmation;
-use Gnarhard\StripeStorefront\Models\Customer;
-use Gnarhard\StripeStorefront\Models\Product;
+use Illuminate\Support\Facades\Mail;
 
 class SendOrderConfirmationEmail
 {
