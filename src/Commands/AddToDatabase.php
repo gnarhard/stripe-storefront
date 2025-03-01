@@ -7,9 +7,9 @@ use Gnarhard\StripeStorefront\Models\Price;
 use Gnarhard\StripeStorefront\Models\Product;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
 
 class AddToDatabase extends Command
 {
