@@ -3,6 +3,7 @@
 namespace Gnarhard\StripeStorefront;
 
 use Gnarhard\StripeStorefront\Http\Controllers\ProductController;
+use Gnarhard\StripeStorefront\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')->group(function () {
@@ -16,3 +17,5 @@ Route::middleware('web')->group(function () {
         Route::get('/download', [ProductController::class, 'download'])->name('download');
     });
 });
+
+Route::post('/stripe/webhook', [WebhookController::class, 'handle']);

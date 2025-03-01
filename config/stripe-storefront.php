@@ -6,5 +6,9 @@ return [
     'stripe' => [
         'live_secret' => env('STRIPE_LIVE_SECRET'),
         'test_secret' => env('STRIPE_TEST_SECRET'),
+        'webhook' => [
+            'secret' => env('STRIPE_WEBHOOK_SECRET'),
+            'tolerance' => env('STRIPE_WEBHOOK_TOLERANCE', 300),
+        ],
     ],
 ];
