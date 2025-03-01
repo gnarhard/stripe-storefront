@@ -9,6 +9,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class AddToDatabase extends Command
 {
@@ -38,9 +39,7 @@ class AddToDatabase extends Command
         $stripe_prices = $this->stripe->prices->all(['active' => true])->data;
 
         // Delete all products, prices, and product images.
-        Product::all()->each->delete();
-        Price::all()->each->delete();
-        Storage::disk(config('stripe-storefront.products-storage-disk'))->deleteDirectory('./');
+        $this->delete_all();
 
         foreach ($stripe_products as $stripeProduct) {
             if ($stripeProduct->active === false) {
@@ -98,7 +97,18 @@ class AddToDatabase extends Command
     private function save_media(Product $product, array $images): void
     {
         foreach ($images as $image) {
-            $product->addMediaFromUrl($image)->toMediaCollection('products');
+            $product->addMediaFromUrl($image)->toMediaCollection('products', config('stripe-storefront.products-storage-disk'));
         }
+    }
+
+    public function delete_all(): void
+    {
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        Product::truncate();
+        Price::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        DB::statement('ALTER TABLE products AUTO_INCREMENT = 1;');
+        DB::statement('ALTER TABLE prices AUTO_INCREMENT = 1;');
+        Storage::disk(config('stripe-storefront.products-storage-disk'))->deleteDirectory('./');
     }
 }
