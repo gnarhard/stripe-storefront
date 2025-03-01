@@ -1,11 +1,11 @@
 <?php
 
-use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Http\Response;
 use Gnarhard\StripeStorefront\Events\WebhookHandled;
 use Gnarhard\StripeStorefront\Events\WebhookReceived;
 use Gnarhard\StripeStorefront\Http\Controllers\WebhookController;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
 
 beforeEach(function () {
     // Disable the signature middleware by clearing the secret.
@@ -40,12 +40,13 @@ it('handles event with existing handler method and dispatches WebhookHandled eve
 
     // Create an inline test controller that extends the base controller
     // and implements a handler for the "test.event" type.
-    class TestWebhookController extends WebhookController {
+    class TestWebhookController extends WebhookController
+    {
         public function handleTestEvent($payload)
         {
             return new Response('Test Event Handled', 200);
         }
-    };
+    }
 
     // Register a separate route for our test controller.
     Route::post('/stripe/test-webhook', [TestWebhookController::class, 'handleWebhook']);
