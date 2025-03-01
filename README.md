@@ -38,12 +38,35 @@ php artisan vendor:publish --tag="stripe-storefront-migrations"
 php artisan migrate
 ```
 
+Add the following filesystem disks:
+
+```php
+[
+    'products' => [
+        'driver'     => 'local',
+        'root'       => storage_path('app/public/products'),
+        'url'        => env('APP_URL').'/storage/products',
+        'visibility' => 'public',
+    ],
+
+    'product-downloads' => [
+        'driver' => 'local',
+        'root'   => storage_path('app/public/downloads'),
+        'url'    => env('APP_URL').'/storage/downloads',
+    ],
+]
+```
+
 Add the following env vars:
 
 ```bash
-STRIPE_KEY=
-STRIPE_SECRET=
+STRIPE_LIVE_KEY=
+STRIPE_LIVE_SECRET=
+STRIPE_TEST_KEY=
+STRIPE_TEST_SECRET=
 STRIPE_WEBHOOK_SECRET=
+STRIPE_STOREFRONT_DOWNLOADS_STORAGE_DISK=product-downloads
+STRIPE_STOREFRONT_PRODUCTS_STORAGE_DISK=products
 ```
 
 You can publish the config file with:
@@ -56,6 +79,16 @@ This is the contents of the published config file:
 
 ```php
 return [
+    'downloads-storage-disk' => env('STRIPE_STOREFRONT_DOWNLOADS_STORAGE_DISK', 'product-downloads'),
+    'products-storage-disk' => env('STRIPE_STOREFRONT_PRODUCTS_STORAGE_DISK', 'products'),
+    'stripe' => [
+        'live_secret' => env('STRIPE_LIVE_SECRET'),
+        'test_secret' => env('STRIPE_TEST_SECRET'),
+        'webhook' => [
+            'secret' => env('STRIPE_WEBHOOK_SECRET'),
+            'tolerance' => env('STRIPE_WEBHOOK_TOLERANCE', 300),
+        ],
+    ],
 ];
 ```
 
