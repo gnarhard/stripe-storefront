@@ -28,7 +28,6 @@ class WebhookController extends Controller
     /**
      * Handle a Stripe webhook call.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Symfony\Component\HttpFoundation\Response
      */
     public function handleWebhook(Request $request)
