@@ -30,7 +30,7 @@ class WebhookController extends Controller
      *
      * @return \Symfony\Component\HttpFoundation\Response
      */
-    public function handleWebhook(Request $request)
+    public function handle(Request $request)
     {
         $payload = json_decode($request->getContent(), true);
         $method = 'handle'.Str::studly(str_replace('.', '_', $payload['type']));
