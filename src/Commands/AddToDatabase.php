@@ -104,8 +104,13 @@ class AddToDatabase extends Command
     public function delete_all(): void
     {
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-        Product::truncate();
-        Price::truncate();
+        Product::all()->each(function ($product) {
+            $product->clearMediaCollection('products');
+            $product->delete();
+        });
+        Price::all()->each(function ($price) {
+            $price->delete();
+        });
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
         DB::statement('ALTER TABLE products AUTO_INCREMENT = 1;');
         DB::statement('ALTER TABLE prices AUTO_INCREMENT = 1;');
