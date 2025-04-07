@@ -7,16 +7,26 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 
-beforeEach(function () {
-    // Disable the signature middleware by clearing the secret.
-    // This prevents middleware issues during testing.
-    config(['stripe-storefront.stripe.webhook.secret' => null]);
+it('returns 403 when Stripe-Signature is missing', function () {
+    config(['stripe-storefront.stripe.webhook.secret' => 'test']);
+    $payload = ['type' => 'test.event'];
 
-    // Register the route for testing the default controller.
-    Route::post('/stripe/webhook', [WebhookController::class, 'handleWebhook']);
+    $this->postJson('/stripe/webhook', $payload)
+        ->assertStatus(403); // 403 Forbidden is returned for AccessDeniedHttpException
+});
+
+it('returns 403 when Stripe-Signature is invalid', function () {
+    config(['stripe-storefront.stripe.webhook.secret' => 'test']);
+    $payload = ['type' => 'test.event'];
+
+    $this->postJson('/stripe/webhook', $payload, [
+        'Stripe-Signature' => 'invalid-signature',
+    ])->assertStatus(403); // 403 Forbidden is returned for AccessDeniedHttpException
 });
 
 it('returns missing method response when no handler exists', function () {
+    config(['stripe-storefront.stripe.webhook.secret' => null]);
+
     Event::fake();
 
     $payload = [
@@ -36,6 +46,7 @@ it('returns missing method response when no handler exists', function () {
 });
 
 it('handles event with existing handler method and dispatches WebhookHandled event', function () {
+    config(['stripe-storefront.stripe.webhook.secret' => null]);
     Event::fake();
 
     // Create an inline test controller that extends the base controller
@@ -49,7 +60,7 @@ it('handles event with existing handler method and dispatches WebhookHandled eve
     }
 
     // Register a separate route for our test controller.
-    Route::post('/stripe/test-webhook', [TestWebhookController::class, 'handleWebhook']);
+    Route::post('/stripe/test-webhook', [TestWebhookController::class, 'handle']);
 
     $payload = [
         'type' => 'test.event', // This will map to "handleTestEvent"
