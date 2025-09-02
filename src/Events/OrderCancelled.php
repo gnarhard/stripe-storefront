@@ -2,7 +2,6 @@
 
 namespace Gnarhard\StripeStorefront\Events;
 
-use Exception;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Foundation\Events\Dispatchable;
