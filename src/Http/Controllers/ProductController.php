@@ -3,6 +3,7 @@
 namespace Gnarhard\StripeStorefront\Http\Controllers;
 
 use Exception;
+use Gnarhard\StripeStorefront\Events\OrderCancelled;
 use Gnarhard\StripeStorefront\Events\OrderCreated;
 use Gnarhard\StripeStorefront\Events\OrderFailed;
 use Gnarhard\StripeStorefront\Facades\StripeStorefront;
@@ -190,5 +191,12 @@ class ProductController extends Controller
 
             return false;
         }
+    }
+
+    public function cancel(Product $product)
+    {
+        event(new OrderCancelled);
+
+        return redirect('/');
     }
 }
