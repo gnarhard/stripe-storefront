@@ -96,16 +96,14 @@ class AddToDatabase extends Command
 
     private function save_media(Product $product, array $images): void
     {
-        foreach ($images as $image) {
-            $product->addMediaFromUrl($image)->toMediaCollection('products', config('stripe-storefront.products-storage-disk'));
-        }
+        $product->image_urls = $images;
+        $product->save();
     }
 
     public function delete_all(): void
     {
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         Product::all()->each(function ($product) {
-            $product->clearMediaCollection('products');
             $product->delete();
         });
         Price::all()->each(function ($price) {
