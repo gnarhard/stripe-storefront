@@ -15,6 +15,7 @@ class Product extends Model
 
     protected $casts = [
         'metadata' => 'array',
+        'image_urls' => 'array',
     ];
 
     /**
