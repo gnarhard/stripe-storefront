@@ -16,7 +16,6 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ProductController extends Controller
 {
@@ -173,7 +172,7 @@ class ProductController extends Controller
             abort(404);
         }
 
-        if (! Storage::disk(config('stripe-storefront.downloads-storage-disk'))->exists('downloads/' . $product->metadata['filename'])) {
+        if (! Storage::disk(config('stripe-storefront.downloads-storage-disk'))->exists('downloads/'.$product->metadata['filename'])) {
             abort(404);
         }
 
