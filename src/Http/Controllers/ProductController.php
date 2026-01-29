@@ -165,7 +165,7 @@ class ProductController extends Controller
         return view('pages.store.order-failed');
     }
 
-    public function download(): void
+    public function download(): RedirectResponse
     {
         $product = Product::where('slug', request('product'))->firstOrFail();
 
@@ -177,7 +177,7 @@ class ProductController extends Controller
             abort(404);
         }
 
-        redirect(Storage::disk('r2')->temporaryUrl('downloads/' . $product->metadata['filename'], now()->addMinutes(10)));
+        return redirect(Storage::disk('r2')->temporaryUrl('downloads/' . $product->metadata['filename'], now()->addMinutes(10)));
     }
 
     public function promo_code_exists(string $promoCode): bool
