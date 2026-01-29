@@ -176,7 +176,7 @@ class ProductController extends Controller
             abort(404);
         }
 
-        return redirect(Storage::disk('r2')->temporaryUrl('downloads/' . $product->metadata['filename'], now()->addMinutes(10)));
+        return redirect(Storage::disk('r2')->temporaryUrl('downloads/'.$product->metadata['filename'], now()->addMinutes(10)));
     }
 
     public function promo_code_exists(string $promoCode): bool
