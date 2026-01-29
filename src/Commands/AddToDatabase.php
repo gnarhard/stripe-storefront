@@ -51,7 +51,6 @@ class AddToDatabase extends Command
             $product = $this->save_product($stripeProduct);
 
             $this->save_price($product, $stripe_prices, $stripeProduct->default_price);
-            $this->save_media($product, $stripeProduct->images ?? []);
 
             $this->info('Synced '.$product->name.'.');
         }
@@ -68,6 +67,7 @@ class AddToDatabase extends Command
             'name' => $stripeProduct->name ?? 'Untitled product',
             'description' => $stripeProduct->description ?? '',
             'metadata' => $stripeProduct->metadata ?? [],
+            'image_urls' => $stripeProduct->images ?? [],
         ]);
     }
 
@@ -94,12 +94,6 @@ class AddToDatabase extends Command
         ]);
     }
 
-    private function save_media(Product $product, array $images): void
-    {
-        $product->image_urls = $images;
-        $product->save();
-    }
-
     public function delete_all(): void
     {
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
@@ -112,6 +106,5 @@ class AddToDatabase extends Command
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
         DB::statement('ALTER TABLE products AUTO_INCREMENT = 1;');
         DB::statement('ALTER TABLE prices AUTO_INCREMENT = 1;');
-        Storage::disk(config('stripe-storefront.products-storage-disk'))->deleteDirectory('./');
     }
 }
