@@ -165,7 +165,7 @@ class ProductController extends Controller
         return view('pages.store.order-failed');
     }
 
-    public function download(): BinaryFileResponse
+    public function download(): void
     {
         $product = Product::where('slug', request('product'))->firstOrFail();
 
@@ -173,11 +173,11 @@ class ProductController extends Controller
             abort(404);
         }
 
-        if (! Storage::disk(config('stripe-storefront.downloads-storage-disk'))->exists($product->metadata['filename'])) {
+        if (! Storage::disk(config('stripe-storefront.downloads-storage-disk'))->exists('downloads/' . $product->metadata['filename'])) {
             abort(404);
         }
 
-        return response()->download(Storage::disk(config('stripe-storefront.downloads-storage-disk'))->path($product->metadata['filename']));
+        redirect(Storage::disk('r2')->temporaryUrl('downloads/' . $product->metadata['filename'], now()->addMinutes(10)));
     }
 
     public function promo_code_exists(string $promoCode): bool
