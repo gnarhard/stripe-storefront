@@ -28,7 +28,7 @@ class WebhookController extends Controller
     /**
      * Handle a Stripe webhook call.
      *
-     * @return \Symfony\Component\HttpFoundation\Response
+     * @return Response
      */
     public function handle(Request $request)
     {
@@ -54,7 +54,7 @@ class WebhookController extends Controller
      * Handle successful calls on the controller.
      *
      * @param  array  $parameters
-     * @return \Symfony\Component\HttpFoundation\Response
+     * @return Response
      */
     protected function successMethod($parameters = [])
     {
@@ -65,7 +65,7 @@ class WebhookController extends Controller
      * Handle calls to missing methods on the controller.
      *
      * @param  array  $parameters
-     * @return \Symfony\Component\HttpFoundation\Response
+     * @return Response
      */
     protected function missingMethod($parameters = [])
     {

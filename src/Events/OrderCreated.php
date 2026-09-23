@@ -5,6 +5,7 @@ namespace Gnarhard\StripeStorefront\Events;
 use Gnarhard\StripeStorefront\Models\Customer;
 use Gnarhard\StripeStorefront\Models\Order;
 use Gnarhard\StripeStorefront\Models\Product;
+use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -25,7 +26,7 @@ class OrderCreated
     /**
      * Get the channels the event should broadcast on.
      *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
+     * @return array<int, Channel>
      */
     public function broadcastOn(): array
     {

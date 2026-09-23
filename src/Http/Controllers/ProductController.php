@@ -100,7 +100,7 @@ class ProductController extends Controller
         $sessionId = $request->get('session_id');
 
         if (! $sessionId) {
-            return $this->showCheckoutError($product, new \Exception('No session ID provided.'));
+            return $this->showCheckoutError($product, new Exception('No session ID provided.'));
         }
 
         $customer = null;
@@ -132,7 +132,7 @@ class ProductController extends Controller
                         'address' => $session->customer_details->address->toArray(),
                     ]);
                 }
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 return $this->showCheckoutError($product, $e);
             }
         }
@@ -185,7 +185,7 @@ class ProductController extends Controller
             $coupon = StripeStorefront::getClient()->coupons->retrieve($promoCode, []);
 
             return $coupon && $coupon->valid;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error($e->getMessage());
 
             return false;
