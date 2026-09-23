@@ -7,7 +7,7 @@ use Gnarhard\StripeStorefront\Models\Price;
 use Gnarhard\StripeStorefront\Models\Product;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class AddToDatabase extends Command
@@ -43,6 +43,12 @@ class AddToDatabase extends Command
         foreach ($stripe_products as $stripeProduct) {
             if ($stripeProduct->active === false) {
                 $this->warn('Skipped '.$stripeProduct->name.'.');
+
+                continue;
+            }
+
+            if (! $stripeProduct->default_price) {
+                $this->warn('Skipped '.$stripeProduct->name.' because it has no default price.');
 
                 continue;
             }
@@ -95,15 +101,9 @@ class AddToDatabase extends Command
 
     public function delete_all(): void
     {
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-        Product::all()->each(function ($product) {
-            $product->delete();
+        Schema::withoutForeignKeyConstraints(function () {
+            Price::truncate();
+            Product::truncate();
         });
-        Price::all()->each(function ($price) {
-            $price->delete();
-        });
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-        DB::statement('ALTER TABLE products AUTO_INCREMENT = 1;');
-        DB::statement('ALTER TABLE prices AUTO_INCREMENT = 1;');
     }
 }

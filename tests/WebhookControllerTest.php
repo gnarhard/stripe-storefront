@@ -6,6 +6,7 @@ use Gnarhard\StripeStorefront\Http\Controllers\WebhookController;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
+use Stripe\WebhookSignature;
 
 it('returns 403 when Stripe-Signature is missing', function () {
     config(['stripe-storefront.stripe.webhook.secret' => 'test']);
@@ -74,4 +75,29 @@ it('handles event with existing handler method and dispatches WebhookHandled eve
 
     $response->assertStatus(200);
     $response->assertSee('Test Event Handled');
+});
+
+it('accepts webhooks with a valid Stripe signature', function () {
+    config(['stripe-storefront.stripe.webhook.secret' => 'whsec_test']);
+    Event::fake();
+
+    $payload = json_encode(['type' => 'checkout.session.completed']);
+
+    $this->call('POST', '/stripe/webhook', server: [
+        'HTTP_STRIPE_SIGNATURE' => WebhookSignature::generateSignatureHeader($payload, 'whsec_test'),
+        'CONTENT_TYPE' => 'application/json',
+    ], content: $payload)->assertOk();
+
+    Event::assertDispatched(WebhookReceived::class);
+});
+
+it('rejects webhooks signed outside the tolerance window', function () {
+    config(['stripe-storefront.stripe.webhook.secret' => 'whsec_test']);
+
+    $payload = json_encode(['type' => 'checkout.session.completed']);
+
+    $this->call('POST', '/stripe/webhook', server: [
+        'HTTP_STRIPE_SIGNATURE' => WebhookSignature::generateSignatureHeader($payload, 'whsec_test', time() - 3600),
+        'CONTENT_TYPE' => 'application/json',
+    ], content: $payload)->assertForbidden();
 });
