@@ -7,7 +7,7 @@ use Stripe\Exception\InvalidRequestException;
 function stripeCatalogFixtures(): array
 {
     return [
-        'GET /v1/products' => [200, ['object' => 'list', 'data' => [
+        'GET /v1/products' => [200, ['object' => 'list', 'has_more' => false, 'data' => [
             [
                 'id' => 'prod_poster', 'object' => 'product', 'name' => 'Karma Poster', 'description' => 'A poster',
                 'active' => true, 'default_price' => 'price_poster', 'metadata' => ['category' => 'merch'],
@@ -18,7 +18,7 @@ function stripeCatalogFixtures(): array
                 'default_price' => null, 'metadata' => [], 'images' => [],
             ],
         ]]],
-        'GET /v1/prices' => [200, ['object' => 'list', 'data' => [
+        'GET /v1/prices' => [200, ['object' => 'list', 'has_more' => false, 'data' => [
             ['id' => 'price_poster', 'object' => 'price', 'unit_amount' => 1500, 'type' => 'one_time'],
         ]]],
         'POST /v1/payment_links' => [200, ['id' => 'plink_poster', 'object' => 'payment_link', 'url' => 'https://buy.stripe.com/poster']],
@@ -84,7 +84,7 @@ it('follows Stripe pagination for products and prices', function () {
 
 it('skips products whose default price is not active instead of emptying the store', function () {
     $this->fakeStripe(array_merge(stripeCatalogFixtures(), [
-        'GET /v1/prices' => [200, ['object' => 'list', 'data' => []]],
+        'GET /v1/prices' => [200, ['object' => 'list', 'has_more' => false, 'data' => []]],
     ]));
 
     $this->artisan('products:add-to-db')

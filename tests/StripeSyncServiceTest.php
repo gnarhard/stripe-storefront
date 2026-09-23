@@ -7,14 +7,14 @@ use Gnarhard\StripeStorefront\Services\TestStripeService;
 function liveStripeFixtures(): array
 {
     return [
-        'GET /v1/products' => [200, ['object' => 'list', 'data' => [[
+        'GET /v1/products' => [200, ['object' => 'list', 'has_more' => false, 'data' => [[
             'id' => 'prod_live', 'object' => 'product', 'name' => 'Karma Poster', 'description' => 'A poster',
             'active' => true, 'metadata' => ['category' => 'merch'], 'images' => ['https://example.com/p.webp'],
         ]]]],
-        'GET /v1/prices' => [200, ['object' => 'list', 'data' => [[
+        'GET /v1/prices' => [200, ['object' => 'list', 'has_more' => false, 'data' => [[
             'id' => 'price_live', 'object' => 'price', 'unit_amount' => 1500, 'currency' => 'usd', 'recurring' => null,
         ]]]],
-        'GET /v1/coupons' => [200, ['object' => 'list', 'data' => [[
+        'GET /v1/coupons' => [200, ['object' => 'list', 'has_more' => false, 'data' => [[
             'id' => 'FRIENDS', 'object' => 'coupon', 'percent_off' => 20, 'amount_off' => null, 'currency' => null,
             'duration' => 'once', 'max_redemptions' => null, 'redeem_by' => null, 'metadata' => [],
         ]]]],
