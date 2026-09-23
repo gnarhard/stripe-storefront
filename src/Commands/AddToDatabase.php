@@ -9,6 +9,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Stripe\PaymentLink;
 
 class AddToDatabase extends Command
 {
@@ -34,11 +35,13 @@ class AddToDatabase extends Command
     public function handle(): void
     {
         $this->stripe = StripeStorefront::getClient();
-        $stripe_products = $this->stripe->products->all(['active' => true])->data;
-        $stripe_prices = $this->stripe->prices->all(['active' => true])->data;
+        $stripe_products = iterator_to_array($this->stripe->products->all(['active' => true, 'limit' => 100])->autoPagingIterator(), false);
+        $stripe_prices = collect(iterator_to_array($this->stripe->prices->all(['active' => true, 'limit' => 100])->autoPagingIterator(), false))
+            ->keyBy('id');
 
-        // Delete all products, prices, and product images.
-        $this->delete_all();
+        // Make every Stripe call before touching the database so a failed request
+        // never leaves the store with a partially deleted catalog.
+        $syncable = [];
 
         foreach ($stripe_products as $stripeProduct) {
             if ($stripeProduct->active === false) {
@@ -53,9 +56,23 @@ class AddToDatabase extends Command
                 continue;
             }
 
+            $stripe_price = $stripe_prices->get($stripeProduct->default_price);
+
+            if (! $stripe_price) {
+                $this->warn('Skipped '.$stripeProduct->name.' because its default price is not active.');
+
+                continue;
+            }
+
+            $syncable[] = [$stripeProduct, $stripe_price, $this->create_payment_link($stripe_price)];
+        }
+
+        $this->delete_all();
+
+        foreach ($syncable as [$stripeProduct, $stripe_price, $payment_link]) {
             $product = $this->save_product($stripeProduct);
 
-            $this->save_price($product, $stripe_prices, $stripeProduct->default_price);
+            $this->save_price($product, $stripe_price, $payment_link);
 
             $this->info('Synced '.$product->name.'.');
         }
@@ -76,11 +93,9 @@ class AddToDatabase extends Command
         ]);
     }
 
-    private function save_price(Product $product, $stripe_prices, string $default_price): void
+    private function create_payment_link(\Stripe\Price $stripe_price): PaymentLink
     {
-        $stripe_price = collect($stripe_prices)->firstWhere('id', $default_price);
-
-        $payment_link = $this->stripe->paymentLinks->create([
+        return $this->stripe->paymentLinks->create([
             'line_items' => [
                 [
                     'price' => $stripe_price->id,
@@ -88,7 +103,10 @@ class AddToDatabase extends Command
                 ],
             ],
         ]);
+    }
 
+    private function save_price(Product $product, \Stripe\Price $stripe_price, PaymentLink $payment_link): void
+    {
         Price::updateOrCreate([
             'stripe_id' => $stripe_price->id,
             'product_id' => $product->id,
