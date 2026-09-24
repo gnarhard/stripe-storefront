@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Stripe\Checkout\Session;
+use Stripe\Exception\InvalidRequestException;
 use Stripe\LineItem;
 
 class ProductController extends Controller
@@ -75,8 +76,7 @@ class ProductController extends Controller
             ]),
         ];
 
-        // Optionally, if a discount code is provided, add it to the session.
-        if ($request->filled('discount_code_id')) {
+        if ($request->filled('discount_code_id') && $this->couponAppliesTo($request->input('discount_code_id'), $product)) {
             $sessionData['discounts'] = [
                 ['coupon' => $request->input('discount_code_id')],
             ];
@@ -127,17 +127,18 @@ class ProductController extends Controller
                     return $this->showCheckoutError($product, new Exception("Checkout session {$sessionId} is not a paid order for {$product->slug}."));
                 }
 
-                if (! empty($session->customer_details)) {
-                    // Retrieve the customer information using the customer ID from the session
-                    $customer = Customer::updateOrCreate([
-                        'email' => $session->customer_details->email,
-                    ], [
-                        'name' => $session->customer_details->name,
-                        'email' => $session->customer_details->email,
-                        'phone' => $session->customer_details->phone,
-                        'address' => $session->customer_details->address->toArray(),
-                    ]);
-                }
+                $details = $session->customer_details;
+
+                // A 100%-off order collects no payment method, so Stripe has no name or address for it.
+                // Skipping the gaps also keeps what a returning customer gave on an earlier order.
+                $customer = Customer::updateOrCreate(
+                    ['email' => $details->email],
+                    array_filter([
+                        'name' => $details->name,
+                        'phone' => $details->phone,
+                        'address' => $details->address?->toArray(),
+                    ], fn ($value) => $value !== null),
+                );
             } catch (Exception $e) {
                 return $this->showCheckoutError($product, $e);
             }
@@ -174,6 +175,30 @@ class ProductController extends Controller
             && collect($session->line_items?->data)->contains(fn (LineItem $item) => $item->price?->product === $product->stripe_id);
     }
 
+    /**
+     * Anyone can edit a checkout link, so its coupon only counts when Stripe limits the coupon to the
+     * product being bought. A coupon without that limit would discount every product in the store.
+     */
+    private function couponAppliesTo(string $couponId, Product $product): bool
+    {
+        try {
+            $coupon = StripeStorefront::getClient()->coupons->retrieve($couponId, ['expand' => ['applies_to']]);
+        } catch (InvalidRequestException) {
+            $coupon = null;
+        }
+
+        $applies = $coupon?->valid === true && in_array($product->stripe_id, $coupon->applies_to->products ?? [], true);
+
+        if (! $applies) {
+            Log::warning('Checkout ignored a coupon that is unknown, no longer valid, or not limited to the product.', [
+                'coupon' => $couponId,
+                'product' => $product->slug,
+            ]);
+        }
+
+        return $applies;
+    }
+
     private function showCheckoutError(Product $product, ?Exception $e): View
     {
         event(new OrderFailed($e));
@@ -195,19 +220,6 @@ class ProductController extends Controller
         }
 
         return redirect(Storage::disk('r2')->temporaryUrl('downloads/'.$product->metadata['filename'], now()->addMinutes(10)));
-    }
-
-    public function promo_code_exists(string $promoCode): bool
-    {
-        try {
-            $coupon = StripeStorefront::getClient()->coupons->retrieve($promoCode, []);
-
-            return $coupon->valid === true;
-        } catch (Exception $e) {
-            Log::error($e->getMessage());
-
-            return false;
-        }
     }
 
     public function cancel(Product $product)

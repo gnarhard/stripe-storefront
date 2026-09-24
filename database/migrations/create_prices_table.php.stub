@@ -17,8 +17,6 @@ return new class extends Migration
             $table->foreignId('product_id')->constrained()->onDelete('cascade')->onUpdate('cascade');
             $table->integer('unit_amount')->nullable(); // nullable for name your own price products
             $table->string('type');
-            $table->string('payment_link_id');
-            $table->string('payment_link');
             $table->timestamps();
         });
     }

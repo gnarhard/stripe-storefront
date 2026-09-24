@@ -21,16 +21,12 @@ function stripeCatalogFixtures(): array
         'GET /v1/prices' => [200, ['object' => 'list', 'has_more' => false, 'data' => [
             ['id' => 'price_poster', 'object' => 'price', 'unit_amount' => 1500, 'type' => 'one_time'],
         ]]],
-        'POST /v1/payment_links' => [200, ['id' => 'plink_poster', 'object' => 'payment_link', 'url' => 'https://buy.stripe.com/poster']],
     ];
 }
 
 it('replaces the local catalog with active Stripe products', function () {
     $stale = Product::create(['stripe_id' => 'prod_old', 'name' => 'Old', 'slug' => 'old']);
-    Price::create([
-        'stripe_id' => 'price_old', 'product_id' => $stale->id, 'unit_amount' => 100, 'type' => 'one_time',
-        'payment_link_id' => 'plink_old', 'payment_link' => 'https://buy.stripe.com/old',
-    ]);
+    Price::create(['stripe_id' => 'price_old', 'product_id' => $stale->id, 'unit_amount' => 100, 'type' => 'one_time']);
 
     $stripe = $this->fakeStripe(stripeCatalogFixtures());
 
@@ -49,15 +45,12 @@ it('replaces the local catalog with active Stripe products', function () {
     ])
         ->and($product->metadata)->toBe(['category' => 'merch'])
         ->and($product->image_urls)->toBe(['https://example.com/poster.webp'])
-        ->and($product->price->only(['stripe_id', 'unit_amount', 'type', 'payment_link', 'payment_link_id']))->toBe([
+        ->and($product->price->only(['stripe_id', 'unit_amount', 'type']))->toBe([
             'stripe_id' => 'price_poster',
             'unit_amount' => 1500,
             'type' => 'one_time',
-            'payment_link' => 'https://buy.stripe.com/poster',
-            'payment_link_id' => 'plink_poster',
         ])
-        ->and($stripe->lastRequestTo('POST', '/v1/payment_links')['params'])
-        ->toBe(['line_items' => [['price' => 'price_poster', 'quantity' => 1]]]);
+        ->and($stripe->lastRequestTo('POST', '/v1/payment_links'))->toBeNull();
 });
 
 it('follows Stripe pagination for products and prices', function () {
@@ -69,7 +62,6 @@ it('follows Stripe pagination for products and prices', function () {
         'GET /v1/prices' => [200, ['object' => 'list', 'url' => '/v1/prices', 'has_more' => true, 'data' => [
             ['id' => 'price_on_page_one', 'object' => 'price', 'unit_amount' => 100, 'type' => 'one_time'],
         ]]],
-        'POST /v1/payment_links' => [200, ['id' => 'plink', 'object' => 'payment_link', 'url' => 'https://buy.stripe.com/x']],
     ]);
 
     $stripe->respondToNextPage('GET /v1/prices', [200, ['object' => 'list', 'url' => '/v1/prices', 'has_more' => false, 'data' => [
@@ -98,7 +90,7 @@ it('keeps the existing catalog when Stripe fails mid-sync', function () {
     Product::create(['stripe_id' => 'prod_old', 'name' => 'Old', 'slug' => 'old']);
 
     $fixtures = stripeCatalogFixtures();
-    unset($fixtures['POST /v1/payment_links']);
+    unset($fixtures['GET /v1/prices']);
     $this->fakeStripe($fixtures);
 
     expect(fn () => $this->artisan('products:add-to-db')->run())->toThrow(InvalidRequestException::class);

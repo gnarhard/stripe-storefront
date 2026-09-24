@@ -2,7 +2,6 @@
 
 use Gnarhard\StripeStorefront\Events\OrderCreated;
 use Gnarhard\StripeStorefront\Events\OrderFailed;
-use Gnarhard\StripeStorefront\Http\Controllers\ProductController;
 use Gnarhard\StripeStorefront\Mail\OrderConfirmation;
 use Gnarhard\StripeStorefront\Models\Customer;
 use Gnarhard\StripeStorefront\Models\Order;
@@ -10,6 +9,7 @@ use Gnarhard\StripeStorefront\Models\Price;
 use Gnarhard\StripeStorefront\Models\Product;
 use Gnarhard\StripeStorefront\StripeStorefront;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
 
@@ -29,8 +29,6 @@ beforeEach(function () {
         'product_id' => $this->product->id,
         'unit_amount' => 2500,
         'type' => 'one_time',
-        'payment_link_id' => 'plink_123',
-        'payment_link' => 'https://buy.stripe.com/test',
     ]);
 });
 
@@ -115,19 +113,56 @@ it('creates a Stripe Checkout session and redirects to it', function () {
         ->and($params['cancel_url'])->toBe(route('store.product.show', ['category' => 'merch', 'product' => 'tablature-collection']));
 });
 
-it('applies a discount code instead of allowing promotion codes', function () {
+function couponResponse(array $overrides = []): array
+{
+    return array_merge([
+        'id' => 'FRIENDS',
+        'object' => 'coupon',
+        'percent_off' => 100,
+        'valid' => true,
+        'applies_to' => ['products' => ['prod_123']],
+    ], $overrides);
+}
+
+it('applies a coupon that Stripe limits to the product instead of allowing promotion codes', function () {
+    Log::shouldReceive('warning')->never();
+
     $stripe = $this->fakeStripe([
+        'GET /v1/coupons/FRIENDS' => [200, couponResponse()],
         'POST /v1/checkout/sessions' => [200, checkoutSessionResponse()],
     ]);
 
     $this->get(route('store.checkout', ['product' => 'tablature-collection', 'discount_code_id' => 'FRIENDS']))
-        ->assertRedirect();
+        ->assertRedirect('https://checkout.stripe.com/c/pay/cs_test_123');
 
     $params = $stripe->lastRequestTo('POST', '/v1/checkout/sessions')['params'];
 
     expect($params['discounts'])->toBe([['coupon' => 'FRIENDS']])
-        ->and($params)->not->toHaveKey('allow_promotion_codes');
+        ->and($params)->not->toHaveKey('allow_promotion_codes')
+        ->and($stripe->lastRequestTo('GET', '/v1/coupons/FRIENDS')['params'])->toBe(['expand' => ['applies_to']]);
 });
+
+it('checks out at full price when the link names a coupon that could discount any product', function (array $coupon) {
+    Log::shouldReceive('warning')->once()->with(Mockery::any(), ['coupon' => 'FRIENDS', 'product' => 'tablature-collection']);
+
+    $stripe = $this->fakeStripe([
+        'GET /v1/coupons/FRIENDS' => $coupon,
+        'POST /v1/checkout/sessions' => [200, checkoutSessionResponse()],
+    ]);
+
+    $this->get(route('store.checkout', ['product' => 'tablature-collection', 'discount_code_id' => 'FRIENDS']))
+        ->assertRedirect('https://checkout.stripe.com/c/pay/cs_test_123');
+
+    $params = $stripe->lastRequestTo('POST', '/v1/checkout/sessions')['params'];
+
+    expect($params)->not->toHaveKey('discounts')
+        ->and($params['allow_promotion_codes'])->toBe('true');
+})->with([
+    'not limited to any product' => [[200, couponResponse(['applies_to' => null])]],
+    'limited to another product' => [[200, couponResponse(['applies_to' => ['products' => ['prod_other']]])]],
+    'no longer valid' => [[200, couponResponse(['valid' => false])]],
+    'unknown' => [[404, ['error' => ['type' => 'invalid_request_error', 'message' => 'No such coupon']]]],
+]);
 
 it('rejects checkout for an unknown product', function () {
     $this->fakeStripe();
@@ -161,6 +196,61 @@ it('records the customer and order from the Stripe session on thank you', functi
     'paid' => 'paid',
     'fully discounted' => 'no_payment_required',
 ]);
+
+function noCostSessionResponse(): array
+{
+    return checkoutSessionResponse([
+        'amount_total' => 0,
+        'payment_status' => 'no_payment_required',
+        'customer_details' => ['email' => 'jane@example.com', 'name' => null, 'phone' => null, 'address' => null],
+    ]);
+}
+
+it('records a 100%-off order, for which Stripe has no name or address', function () {
+    app()->detectEnvironment(fn () => 'local');
+    Event::fake([OrderCreated::class]);
+
+    $this->fakeStripe([
+        'GET /v1/checkout/sessions/cs_test_123' => [200, noCostSessionResponse()],
+    ]);
+
+    $this->get(route('store.thank-you', ['product' => 'tablature-collection']).'&session_id=cs_test_123')
+        ->assertOk()
+        ->assertViewIs('pages.store.thank-you');
+
+    $customer = Customer::where('email', 'jane@example.com')->sole();
+
+    expect($customer->name)->toBeNull()
+        ->and($customer->address)->toBeNull()
+        ->and(Order::where('stripe_session_id', 'cs_test_123')->sole()->total)->toEqual(0);
+
+    Event::assertDispatched(OrderCreated::class, fn (OrderCreated $event) => $event->customer->is($customer));
+});
+
+it('keeps what a returning customer gave before when a 100%-off order has no name or address', function () {
+    app()->detectEnvironment(fn () => 'local');
+    Event::fake([OrderCreated::class]);
+    Customer::create([
+        'name' => 'Jane Doe',
+        'email' => 'jane@example.com',
+        'phone' => '+15555550100',
+        'address' => ['postal_code' => '80202', 'country' => 'US'],
+    ]);
+
+    $this->fakeStripe([
+        'GET /v1/checkout/sessions/cs_test_123' => [200, noCostSessionResponse()],
+    ]);
+
+    $this->get(route('store.thank-you', ['product' => 'tablature-collection']).'&session_id=cs_test_123')
+        ->assertOk()
+        ->assertViewIs('pages.store.thank-you');
+
+    expect(Customer::sole()->only(['name', 'phone', 'address']))->toBe([
+        'name' => 'Jane Doe',
+        'phone' => '+15555550100',
+        'address' => ['postal_code' => '80202', 'country' => 'US'],
+    ]);
+});
 
 it('shows the order failed page when the session did not pay for the product', function (array $session) {
     app()->detectEnvironment(fn () => 'local');
@@ -206,16 +296,6 @@ it('shows the order failed page without a session id', function () {
 
     Event::assertDispatched(OrderFailed::class);
 });
-
-it('checks whether a promo code is a valid Stripe coupon', function (int $status, array $body, bool $expected) {
-    $this->fakeStripe(['GET /v1/coupons/FRIENDS' => [$status, $body]]);
-
-    expect(app(ProductController::class)->promo_code_exists('FRIENDS'))->toBe($expected);
-})->with([
-    'valid coupon' => [200, ['id' => 'FRIENDS', 'object' => 'coupon', 'valid' => true], true],
-    'expired coupon' => [200, ['id' => 'FRIENDS', 'object' => 'coupon', 'valid' => false], false],
-    'missing coupon' => [404, ['error' => ['type' => 'invalid_request_error', 'message' => 'No such coupon']], false],
-]);
 
 it('redirects downloads to a temporary url', function () {
     fakeDownloads('tabs.zip');

@@ -112,8 +112,10 @@ Synchronize the Stripe products to your database. In production it pulls from li
 php artisan products:add-to-db
 ```
 
-To share a checkout link with a discount, copy the unique discount code id and append it to the url like this:
-`https://graysonerhard.com/store/checkout?product=plantable-collection&discount_code_id=WChg0TfU`
+To share a checkout link with a discount, create a coupon in Stripe that applies only to the product you are linking to (Apply to specific products), then append its ID to the checkout URL:
+`https://example.com/store/checkout?product=<product-slug>&discount_code_id=<coupon-id>`
+
+Checkout ignores a coupon that is unknown, no longer valid, or not limited to the linked product: the buyer sees the full price and can still enter a promotion code. `products:sync-live-to-test` copies coupons without their product limits, so create a limited test coupon to try a discount link outside production.
 
 `/store/download` only accepts signed links, so link to a product's file with `$product->downloadUrl()`. The order confirmation email passes that link to the `mail.order-confirmation` view as `$downloadUrl`. The thank-you page only records an order for a Checkout Session that paid for the product in its URL.
 

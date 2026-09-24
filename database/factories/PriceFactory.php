@@ -26,8 +26,6 @@ class PriceFactory extends Factory
             'price_id' => 'price_'.$this->faker->uuid,
             'unit_amount' => $this->faker->numberBetween(1000, 10000),
             'type' => 'one_time',
-            'payment_link_id' => 'plink_'.$this->faker->uuid,
-            'payment_link' => 'https://example.com/payment/'.$this->faker->uuid,
             'currency' => 'usd',
         ];
     }
