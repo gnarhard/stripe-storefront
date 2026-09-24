@@ -7,6 +7,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+/**
+ * @property string $name
+ * @property string $slug
+ * @property array|null $metadata
+ * @property-read Price|null $price
+ */
 class Product extends Model
 {
     use HasFactory;

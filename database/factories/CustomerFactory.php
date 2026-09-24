@@ -6,23 +6,19 @@ use Gnarhard\StripeStorefront\Models\Customer;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @template TModel of \Gnarhard\StripeStorefront\Customer
- *
- * @extends Factory<TModel>
+ * @extends Factory<Customer>
  */
 class CustomerFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
      *
-     * @var class-string<TModel>
+     * @var class-string<Customer>
      */
     protected $model = Customer::class;
 
     /**
      * Define the model's default state.
-     *
-     * @return array<string, mixed>
      */
     public function definition(): array
     {
@@ -32,9 +28,9 @@ class CustomerFactory extends Factory
             'phone' => $this->faker->phoneNumber,
             'address' => [
                 'line1' => $this->faker->streetAddress,
-                'line2' => $this->faker->secondaryAddress,
+                'line2' => 'Apt '.$this->faker->buildingNumber(),
                 'city' => $this->faker->city,
-                'state' => $this->faker->state,
+                'state' => $this->faker->randomElement(['CO', 'CA', 'NY', 'TX']),
                 'postal_code' => $this->faker->postcode,
                 'country' => $this->faker->countryCode,
             ],

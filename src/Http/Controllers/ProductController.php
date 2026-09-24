@@ -96,8 +96,8 @@ class ProductController extends Controller
         ]);
 
         // Retrieve the product by ID (or adjust as needed)
-        $product = Product::where('slug', $request->get('product'))->firstOrFail();
-        $sessionId = $request->get('session_id');
+        $product = Product::where('slug', $request->input('product'))->firstOrFail();
+        $sessionId = $request->input('session_id');
 
         if (! $sessionId) {
             return $this->showCheckoutError($product, new Exception('No session ID provided.'));
@@ -184,7 +184,7 @@ class ProductController extends Controller
         try {
             $coupon = StripeStorefront::getClient()->coupons->retrieve($promoCode, []);
 
-            return $coupon && $coupon->valid;
+            return $coupon->valid === true;
         } catch (Exception $e) {
             Log::error($e->getMessage());
 

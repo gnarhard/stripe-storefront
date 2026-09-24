@@ -10,3 +10,23 @@ parameters:
     tmpDir: build/phpstan
     checkOctaneCompatibility: true
     checkModelProperties: true
+    configDirectories:
+        - config
+    ignoreErrors:
+        # These views belong to (or are overridden by) the host application, invisible to the package.
+        -
+            identifier: argument.type
+            path: src/Http/Controllers/ProductController.php
+            count: 6
+        -
+            identifier: method.impossibleType
+            path: src/Http/Controllers/ProductController.php
+            count: 1
+        -
+            identifier: argument.type
+            path: src/Mail/NewOrder.php
+            count: 1
+        -
+            identifier: argument.type
+            path: src/Mail/OrderConfirmation.php
+            count: 1

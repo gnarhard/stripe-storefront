@@ -6,23 +6,19 @@ use Gnarhard\StripeStorefront\Models\Order;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @template TModel of \Gnarhard\StripeStorefront\Order
- *
- * @extends Factory<TModel>
+ * @extends Factory<Order>
  */
 class OrderFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
      *
-     * @var class-string<TModel>
+     * @var class-string<Order>
      */
     protected $model = Order::class;
 
     /**
      * Define the model's default state.
-     *
-     * @return array<string, mixed>
      */
     public function definition(): array
     {

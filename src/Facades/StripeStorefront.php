@@ -5,7 +5,9 @@ namespace Gnarhard\StripeStorefront\Facades;
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @see \Grayson Erhard\StripeStorefront\StripeStorefront
+ * @method static \Stripe\StripeClient getClient()
+ *
+ * @see \Gnarhard\StripeStorefront\StripeStorefront
  */
 class StripeStorefront extends Facade
 {

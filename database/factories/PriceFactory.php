@@ -6,23 +6,19 @@ use Gnarhard\StripeStorefront\Models\Price;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @template TModel of \Gnarhard\StripeStorefront\Price
- *
- * @extends Factory<TModel>
+ * @extends Factory<Price>
  */
 class PriceFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
      *
-     * @var class-string<TModel>
+     * @var class-string<Price>
      */
     protected $model = Price::class;
 
     /**
      * Define the model's default state.
-     *
-     * @return array<string, mixed>
      */
     public function definition(): array
     {

@@ -5,6 +5,9 @@ namespace Gnarhard\StripeStorefront\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property string $stripe_id
+ */
 class Price extends Model
 {
     use HasFactory;

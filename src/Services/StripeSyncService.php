@@ -61,20 +61,16 @@ class StripeSyncService
                 // Sync prices for this product.
                 $prices = $this->liveService->getProductPrices($liveProduct->id);
                 foreach ($prices as $price) {
-                    if ($dryRun) {
-                        $log('  → Would clone price: '.$price->unit_amount.' '.$price->currency);
-                    } else {
-                        $newPrice = $this->testService->createPrice([
-                            'product' => $testProduct->id,
-                            'unit_amount' => $price->unit_amount,
-                            'currency' => $price->currency,
-                            'recurring' => $price->recurring ? [
-                                'interval' => $price->recurring->interval,
-                                'interval_count' => $price->recurring->interval_count,
-                            ] : null,
-                        ]);
-                        $log('  → Cloned price: '.$newPrice->unit_amount.' '.$newPrice->currency);
-                    }
+                    $newPrice = $this->testService->createPrice([
+                        'product' => $testProduct->id,
+                        'unit_amount' => $price->unit_amount,
+                        'currency' => $price->currency,
+                        'recurring' => $price->recurring ? [
+                            'interval' => $price->recurring->interval,
+                            'interval_count' => $price->recurring->interval_count,
+                        ] : null,
+                    ]);
+                    $log('  → Cloned price: '.$newPrice->unit_amount.' '.$newPrice->currency);
                 }
             }
         }

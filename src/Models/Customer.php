@@ -4,6 +4,11 @@ namespace Gnarhard\StripeStorefront\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property string $name
+ * @property string $email
+ * @property array $address
+ */
 class Customer extends Model
 {
     protected $guarded = [];
