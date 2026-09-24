@@ -3,6 +3,7 @@
 use Gnarhard\StripeStorefront\Events\OrderCreated;
 use Gnarhard\StripeStorefront\Events\OrderFailed;
 use Gnarhard\StripeStorefront\Http\Controllers\ProductController;
+use Gnarhard\StripeStorefront\Mail\OrderConfirmation;
 use Gnarhard\StripeStorefront\Models\Customer;
 use Gnarhard\StripeStorefront\Models\Order;
 use Gnarhard\StripeStorefront\Models\Price;
@@ -40,6 +41,8 @@ function checkoutSessionResponse(array $overrides = []): array
         'object' => 'checkout.session',
         'url' => 'https://checkout.stripe.com/c/pay/cs_test_123',
         'amount_total' => 2500,
+        'payment_status' => 'paid',
+        'line_items' => lineItemsFor('prod_123'),
         'customer_details' => [
             'name' => 'Jane Doe',
             'email' => 'jane@example.com',
@@ -54,6 +57,34 @@ function checkoutSessionResponse(array $overrides = []): array
             ],
         ],
     ], $overrides);
+}
+
+/**
+ * The expanded line_items list of a session that bought one unit of the given Stripe product.
+ */
+function lineItemsFor(string $stripeProductId): array
+{
+    return [
+        'object' => 'list',
+        'data' => [[
+            'id' => 'li_123',
+            'object' => 'item',
+            'price' => ['id' => 'price_123', 'object' => 'price', 'product' => $stripeProductId],
+            'quantity' => 1,
+        ]],
+        'has_more' => false,
+        'url' => '/v1/checkout/sessions/cs_test_123/line_items',
+    ];
+}
+
+function fakeDownloads(string ...$filenames): void
+{
+    config(['stripe-storefront.downloads-storage-disk' => 'r2']);
+    Storage::fake('r2');
+
+    foreach ($filenames as $filename) {
+        Storage::disk('r2')->put("downloads/{$filename}", 'zip');
+    }
 }
 
 it('binds the storefront client to the test key outside production', function () {
@@ -105,12 +136,12 @@ it('rejects checkout for an unknown product', function () {
         ->assertSessionHasErrors('product');
 });
 
-it('records the customer and order from the Stripe session on thank you', function () {
+it('records the customer and order from the Stripe session on thank you', function (string $paymentStatus) {
     app()->detectEnvironment(fn () => 'local');
     Event::fake([OrderCreated::class]);
 
-    $this->fakeStripe([
-        'GET /v1/checkout/sessions/cs_test_123' => [200, checkoutSessionResponse()],
+    $stripe = $this->fakeStripe([
+        'GET /v1/checkout/sessions/cs_test_123' => [200, checkoutSessionResponse(['payment_status' => $paymentStatus])],
     ]);
 
     $this->get(route('store.thank-you', ['product' => 'tablature-collection']).'&session_id=cs_test_123')
@@ -122,10 +153,35 @@ it('records the customer and order from the Stripe session on thank you', functi
     expect($customer->name)->toBe('Jane Doe')
         ->and($customer->phone)->toBe('+15555550100')
         ->and($customer->address['postal_code'])->toBe('80202')
-        ->and(Order::where('stripe_session_id', 'cs_test_123')->sole()->total)->toEqual(2500);
+        ->and(Order::where('stripe_session_id', 'cs_test_123')->sole()->total)->toEqual(2500)
+        ->and($stripe->lastRequestTo('GET', '/v1/checkout/sessions/cs_test_123')['params'])->toBe(['expand' => ['line_items']]);
 
     Event::assertDispatched(OrderCreated::class, fn (OrderCreated $event) => $event->customer->is($customer));
-});
+})->with([
+    'paid' => 'paid',
+    'fully discounted' => 'no_payment_required',
+]);
+
+it('shows the order failed page when the session did not pay for the product', function (array $session) {
+    app()->detectEnvironment(fn () => 'local');
+    Event::fake([OrderFailed::class, OrderCreated::class]);
+
+    $this->fakeStripe([
+        'GET /v1/checkout/sessions/cs_test_123' => [200, checkoutSessionResponse($session)],
+    ]);
+
+    $this->get(route('store.thank-you', ['product' => 'tablature-collection']).'&session_id=cs_test_123')
+        ->assertOk()
+        ->assertSee('Order failed');
+
+    Event::assertDispatched(OrderFailed::class, fn (OrderFailed $event) => $event->exception !== null);
+    Event::assertNotDispatched(OrderCreated::class);
+    expect(Order::count())->toBe(0);
+})->with([
+    'unpaid' => [['payment_status' => 'unpaid']],
+    'another product' => [['line_items' => lineItemsFor('prod_other')]],
+    'no line items' => [['line_items' => null]],
+]);
 
 it('shows the order failed page when the Stripe session cannot be retrieved', function () {
     app()->detectEnvironment(fn () => 'local');
@@ -162,18 +218,61 @@ it('checks whether a promo code is a valid Stripe coupon', function (int $status
 ]);
 
 it('redirects downloads to a temporary url', function () {
-    config(['stripe-storefront.downloads-storage-disk' => 'r2']);
-    Storage::fake('r2');
-    Storage::disk('r2')->put('downloads/tabs.zip', 'zip');
+    fakeDownloads('tabs.zip');
 
-    $this->get(route('store.download', ['product' => 'tablature-collection']))
+    $this->get($this->product->downloadUrl())
         ->assertRedirectContains('downloads/tabs.zip');
 });
 
 it('aborts downloads when the file is missing', function () {
-    config(['stripe-storefront.downloads-storage-disk' => 'r2']);
-    Storage::fake('r2');
+    fakeDownloads();
+
+    $this->get($this->product->downloadUrl())
+        ->assertNotFound();
+});
+
+it('refuses download links that were not signed for the product', function () {
+    fakeDownloads('tabs.zip', 'other.zip');
+    Product::create([
+        'stripe_id' => 'prod_other',
+        'name' => 'Other',
+        'slug' => 'other',
+        'metadata' => ['category' => 'merch', 'filename' => 'other.zip'],
+    ]);
 
     $this->get(route('store.download', ['product' => 'tablature-collection']))
-        ->assertNotFound();
+        ->assertForbidden();
+
+    $this->get(str_replace('product=tablature-collection', 'product=other', $this->product->downloadUrl()))
+        ->assertForbidden();
+});
+
+it('downloads the signed product even when the request body names another one', function () {
+    fakeDownloads('tabs.zip', 'other.zip');
+    Product::create([
+        'stripe_id' => 'prod_other',
+        'name' => 'Other',
+        'slug' => 'other',
+        'metadata' => ['category' => 'merch', 'filename' => 'other.zip'],
+    ]);
+
+    $this->call('GET', $this->product->downloadUrl(), server: ['CONTENT_TYPE' => 'application/json'], content: json_encode(['product' => 'other']))
+        ->assertRedirectContains('downloads/tabs.zip');
+});
+
+it('accepts download links opened on another host', function () {
+    fakeDownloads('tabs.zip');
+
+    $this->get(str_replace(url('/'), 'https://www.example.test', $this->product->downloadUrl()))
+        ->assertRedirectContains('downloads/tabs.zip');
+});
+
+it('emails an absolute download link that keeps working', function () {
+    fakeDownloads('tabs.zip');
+
+    $url = (new OrderConfirmation($this->product))->content()->with['downloadUrl'];
+    $this->travel(10)->years();
+
+    expect($url)->toStartWith(url('/store/download').'?product=tablature-collection&signature=');
+    $this->get($url)->assertRedirectContains('downloads/tabs.zip');
 });

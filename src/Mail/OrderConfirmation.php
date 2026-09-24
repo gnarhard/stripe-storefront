@@ -40,7 +40,7 @@ class OrderConfirmation extends Mailable implements ShouldQueue
         return new Content(
             view: 'mail.order-confirmation',
             with: [
-                'downloadUrl' => route('store.download', ['product' => $this->product]),
+                'downloadUrl' => $this->product->downloadUrl(),
             ]
         );
     }

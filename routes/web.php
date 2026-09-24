@@ -14,7 +14,7 @@ Route::middleware('web')->group(function () {
         Route::get('/checkout', [ProductController::class, 'showCheckout'])->name('checkout');
         Route::get('/cancel', [ProductController::class, 'cancel'])->name('cancel');
         Route::get('/thank-you', [ProductController::class, 'thankYou'])->name('thank-you');
-        Route::get('/download', [ProductController::class, 'download'])->name('download');
+        Route::get('/download', [ProductController::class, 'download'])->middleware('signed:relative')->name('download');
     });
 });
 

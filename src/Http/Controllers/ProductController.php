@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Stripe\Checkout\Session;
+use Stripe\LineItem;
 
 class ProductController extends Controller
 {
@@ -119,7 +121,11 @@ class ProductController extends Controller
         } else {
             try {
                 // Retrieve the Checkout Session using the provided session ID
-                $session = StripeStorefront::getClient()->checkout->sessions->retrieve($sessionId);
+                $session = StripeStorefront::getClient()->checkout->sessions->retrieve($sessionId, ['expand' => ['line_items']]);
+
+                if (! $this->paidFor($session, $product)) {
+                    return $this->showCheckoutError($product, new Exception("Checkout session {$sessionId} is not a paid order for {$product->slug}."));
+                }
 
                 if (! empty($session->customer_details)) {
                     // Retrieve the customer information using the customer ID from the session
@@ -157,6 +163,17 @@ class ProductController extends Controller
         ]);
     }
 
+    /**
+     * The thank-you page records the order and hands out the download link, so a session paid for one
+     * product must not unlock another through a swapped slug. Anything but unpaid counts, per Stripe's
+     * fulfillment guide, so 100% discounts pass.
+     */
+    private function paidFor(Session $session, Product $product): bool
+    {
+        return $session->payment_status !== 'unpaid'
+            && collect($session->line_items?->data)->contains(fn (LineItem $item) => $item->price?->product === $product->stripe_id);
+    }
+
     private function showCheckoutError(Product $product, ?Exception $e): View
     {
         event(new OrderFailed($e));
@@ -164,9 +181,10 @@ class ProductController extends Controller
         return view('pages.store.order-failed');
     }
 
-    public function download(): RedirectResponse
+    public function download(Request $request): RedirectResponse
     {
-        $product = Product::where('slug', request('product'))->firstOrFail();
+        // Only the query string is signed; input() would let a JSON body pick another product.
+        $product = Product::where('slug', $request->query('product'))->firstOrFail();
 
         if (! isset($product->metadata['filename'])) {
             abort(404);

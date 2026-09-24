@@ -115,6 +115,8 @@ php artisan products:add-to-db
 To share a checkout link with a discount, copy the unique discount code id and append it to the url like this:
 `https://graysonerhard.com/store/checkout?product=plantable-collection&discount_code_id=WChg0TfU`
 
+`/store/download` only accepts signed links, so link to a product's file with `$product->downloadUrl()`. The order confirmation email passes that link to the `mail.order-confirmation` view as `$downloadUrl`. The thank-you page only records an order for a Checkout Session that paid for the product in its URL.
+
 ## Testing
 
 ```bash
