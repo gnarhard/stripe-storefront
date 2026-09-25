@@ -3,7 +3,10 @@
 use Gnarhard\StripeStorefront\Events\WebhookHandled;
 use Gnarhard\StripeStorefront\Events\WebhookReceived;
 use Gnarhard\StripeStorefront\Http\Controllers\WebhookController;
+use Gnarhard\StripeStorefront\Models\Price;
+use Gnarhard\StripeStorefront\Models\Product;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Stripe\WebhookSignature;
@@ -101,3 +104,60 @@ it('rejects webhooks signed outside the tolerance window', function () {
         'CONTENT_TYPE' => 'application/json',
     ], content: $payload)->assertForbidden();
 });
+
+function storeProduct(string $slug): Product
+{
+    $product = Product::create(['stripe_id' => "prod_{$slug}", 'name' => $slug, 'slug' => $slug, 'metadata' => ['category' => 'merch']]);
+    Price::create(['stripe_id' => "price_{$slug}", 'product_id' => $product->id, 'unit_amount' => 2500, 'type' => 'one_time']);
+
+    return $product;
+}
+
+it('removes a product from the store when Stripe archives or deletes it', function (string $type, array $object) {
+    config(['stripe-storefront.stripe.webhook.secret' => null]);
+    storeProduct('plantable');
+    $kept = storeProduct('poster');
+    Cache::put('featured_merch', 'stale');
+    Cache::put('unfeatured_merch', 'stale');
+
+    $this->postJson('/stripe/webhook', ['type' => $type, 'data' => ['object' => $object]])->assertOk();
+
+    expect(Product::pluck('id')->all())->toBe([$kept->id])
+        ->and(Price::pluck('stripe_id')->all())->toBe(['price_poster'])
+        ->and(Cache::has('featured_merch'))->toBeFalse()
+        ->and(Cache::has('unfeatured_merch'))->toBeFalse();
+})->with([
+    'product archived' => ['product.updated', ['id' => 'prod_plantable', 'active' => false]],
+    'product deleted' => ['product.deleted', ['id' => 'prod_plantable']],
+    'price archived' => ['price.updated', ['id' => 'price_plantable', 'active' => false]],
+    'price deleted' => ['price.deleted', ['id' => 'price_plantable']],
+]);
+
+it('keeps the store as is when Stripe updates an active product or price', function (string $type, string $id) {
+    config(['stripe-storefront.stripe.webhook.secret' => null]);
+    storeProduct('plantable');
+    Cache::put('featured_merch', 'cached');
+
+    $this->postJson('/stripe/webhook', ['type' => $type, 'data' => ['object' => ['id' => $id, 'active' => true]]])->assertOk();
+
+    expect(Product::count())->toBe(1)
+        ->and(Price::count())->toBe(1)
+        ->and(Cache::get('featured_merch'))->toBe('cached');
+})->with([
+    'product' => ['product.updated', 'prod_plantable'],
+    'price' => ['price.updated', 'price_plantable'],
+]);
+
+it('ignores removal events for products the store does not list', function (string $type, string $id) {
+    config(['stripe-storefront.stripe.webhook.secret' => null]);
+    storeProduct('plantable');
+    Cache::put('featured_merch', 'cached');
+
+    $this->postJson('/stripe/webhook', ['type' => $type, 'data' => ['object' => ['id' => $id, 'active' => false]]])->assertOk();
+
+    expect(Product::count())->toBe(1)
+        ->and(Cache::get('featured_merch'))->toBe('cached');
+})->with([
+    'product' => ['product.deleted', 'prod_unlisted'],
+    'price' => ['price.deleted', 'price_unlisted'],
+]);

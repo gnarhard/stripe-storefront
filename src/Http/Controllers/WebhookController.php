@@ -5,8 +5,10 @@ namespace Gnarhard\StripeStorefront\Http\Controllers;
 use Gnarhard\StripeStorefront\Events\WebhookHandled;
 use Gnarhard\StripeStorefront\Events\WebhookReceived;
 use Gnarhard\StripeStorefront\Http\Middleware\VerifyWebhookSignature;
+use Gnarhard\StripeStorefront\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Stripe\Stripe;
 use Symfony\Component\HttpFoundation\Response;
@@ -48,6 +50,57 @@ class WebhookController extends Controller
         }
 
         return $this->missingMethod($payload);
+    }
+
+    protected function handleProductUpdated(array $payload): Response
+    {
+        if (! $payload['data']['object']['active']) {
+            $this->removeFromStore(Product::firstWhere('stripe_id', $payload['data']['object']['id']));
+        }
+
+        return $this->successMethod();
+    }
+
+    protected function handleProductDeleted(array $payload): Response
+    {
+        $this->removeFromStore(Product::firstWhere('stripe_id', $payload['data']['object']['id']));
+
+        return $this->successMethod();
+    }
+
+    protected function handlePriceUpdated(array $payload): Response
+    {
+        if (! $payload['data']['object']['active']) {
+            $this->removeFromStore(Product::whereRelation('price', 'stripe_id', $payload['data']['object']['id'])->first());
+        }
+
+        return $this->successMethod();
+    }
+
+    protected function handlePriceDeleted(array $payload): Response
+    {
+        $this->removeFromStore(Product::whereRelation('price', 'stripe_id', $payload['data']['object']['id'])->first());
+
+        return $this->successMethod();
+    }
+
+    /**
+     * Stripe refuses to check out an archived product or price, so drop it rather than wait for the next
+     * products:add-to-db. Only removal is handled here: a full resync truncates the catalog, which is unsafe
+     * to run for each of the several events one dashboard edit sends.
+     */
+    private function removeFromStore(?Product $product): void
+    {
+        if (! $product) {
+            return;
+        }
+
+        $product->price()->delete();
+        $product->delete();
+
+        $category = $product->metadata['category'] ?? null;
+        Cache::forget('featured_'.$category);
+        Cache::forget('unfeatured_'.$category);
     }
 
     /**

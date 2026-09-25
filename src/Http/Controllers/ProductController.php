@@ -84,8 +84,12 @@ class ProductController extends Controller
             $sessionData['allow_promotion_codes'] = true;
         }
 
-        // Create the Stripe Checkout Session
-        $checkoutSession = StripeStorefront::getClient()->checkout->sessions->create($sessionData);
+        try {
+            $checkoutSession = StripeStorefront::getClient()->checkout->sessions->create($sessionData);
+        } catch (InvalidRequestException $e) {
+            // The local catalog can lag Stripe, e.g. a product archived before its webhook arrives.
+            return $this->showCheckoutError($product, $e);
+        }
 
         // Redirect the user to the checkout page
         return redirect($checkoutSession->url);
