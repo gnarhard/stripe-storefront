@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
+use Stripe\Exception\InvalidRequestException;
 
 beforeEach(function () {
     View::addLocation(__DIR__.'/fixtures/views');
@@ -163,6 +164,23 @@ it('checks out at full price when the link names a coupon that could discount an
     'no longer valid' => [[200, couponResponse(['valid' => false])]],
     'unknown' => [[404, ['error' => ['type' => 'invalid_request_error', 'message' => 'No such coupon']]]],
 ]);
+
+it('shows the order failed page when Stripe refuses to check out the product', function () {
+    Event::fake([OrderFailed::class]);
+
+    $this->fakeStripe([
+        'POST /v1/checkout/sessions' => [400, ['error' => [
+            'type' => 'invalid_request_error',
+            'message' => 'Price `price_123` is not available to be purchased because its product is not active.',
+        ]]],
+    ]);
+
+    $this->get(route('store.checkout', ['product' => 'tablature-collection']))
+        ->assertOk()
+        ->assertSee('Order failed');
+
+    Event::assertDispatched(OrderFailed::class, fn (OrderFailed $event) => $event->exception instanceof InvalidRequestException);
+});
 
 it('rejects checkout for an unknown product', function () {
     $this->fakeStripe();
